@@ -1,0 +1,15 @@
+# Node dependencies & builds
+node_modules
+frontend/node_modules
+frontend/dist
+
+# 🔒 PRIVATE USER DATA & SECRETS (NEVER COMMIT)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+google_sheet_export/*.csv
+.env
+.env.*
+*.log
+.server.pid
+.DS_Store
