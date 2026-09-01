@@ -1,15 +1,13 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
-  FileCode2, 
   GitCompare, 
   Sparkles, 
   Receipt, 
   Wallet, 
   Tags,
-  Download,
-  Upload,
-  Coins
+  Coins,
+  Lock
 } from 'lucide-react';
 import { ThemeSelector } from './ThemeSelector';
 
@@ -19,6 +17,7 @@ interface SidebarProps {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
   totalBalance: number;
+  onLockApp?: () => void;
 }
 
 interface NavItem {
@@ -29,7 +28,7 @@ interface NavItem {
   highlight?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, totalBalance }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, totalBalance, onLockApp }) => {
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Tổng quan (Dashboard)', icon: LayoutDashboard },
     { id: 'compare', label: 'So sánh các tháng', icon: GitCompare },
@@ -100,9 +99,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, total
         })}
       </nav>
 
-      {/* Footer Theme Selector */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-900/50">
+      {/* Footer Theme Selector & Lock Button */}
+      <div className="p-3 border-t border-slate-800/80 bg-slate-900/50 space-y-2">
         <ThemeSelector />
+        {onLockApp && (
+          <button
+            type="button"
+            onClick={onLockApp}
+            className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all duration-150"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Khóa ứng dụng (PIN)</span>
+          </button>
+        )}
       </div>
     </aside>
   );

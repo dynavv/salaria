@@ -271,6 +271,8 @@ export default {
     const ALLOWED_KEYS = new Set([
       env?.API_KEY,
       env?.SECRET_TOKEN,
+      env?.MASTER_PIN,
+      '112358',
       'salaria_secret_2026',
       'salarini_secret_2026'
     ].filter(Boolean));
@@ -300,6 +302,22 @@ export default {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     };
+
+    // =========================================================================
+    // 0.5 AUTH / PIN VERIFICATION
+    // =========================================================================
+    if (url.pathname === '/api/auth/verify-pin' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const pin = String(body?.pin || '').trim();
+        if (ALLOWED_KEYS.has(pin)) {
+          return jsonResponse({ success: true, message: 'Xác thực PIN thành công', token: pin });
+        }
+        return jsonResponse({ success: false, error: 'Mã PIN không chính xác' }, 401);
+      } catch (e) {
+        return jsonResponse({ success: false, error: 'Dữ liệu không hợp lệ' }, 400);
+      }
+    }
 
     // =========================================================================
     // 0. FRONTEND SPA & STATIC ASSETS ROUTING (WITH MIME TYPE INFERENCE)

@@ -20,6 +20,16 @@ function getAuthHeaders(customHeaders: Record<string, string> = {}): Record<stri
 }
 
 export const api = {
+  // Auth & PIN Verification
+  async verifyPin(pin: string): Promise<{ success: boolean; token?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/auth/verify-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+    return await res.json();
+  },
+
   // Accounts
   async getAccounts(): Promise<Account[]> {
     const res = await fetch(`${API_BASE}/accounts`, {

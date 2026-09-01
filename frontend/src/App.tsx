@@ -3,6 +3,7 @@ import { Sidebar, TabType } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { QuickAddModal } from './components/QuickAddModal';
 import { TelegramBotConfigModal } from './components/TelegramBotConfigModal';
+import { PinLockScreen } from './components/PinLockScreen';
 import { DashboardPage } from './pages/DashboardPage';
 import { TelegramImportPage } from './pages/TelegramImportPage';
 import { MultiMonthComparePage } from './pages/MultiMonthComparePage';
@@ -14,6 +15,9 @@ import { Account, Category } from './types';
 import { api } from './api/client';
 
 export function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return Boolean(localStorage.getItem('salaria_api_key'));
+  });
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [currentMonth, setCurrentMonth] = useState<string>(new Date().toISOString().substring(0, 7));
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
@@ -26,8 +30,10 @@ export function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadInitialData(true);
-  }, []);
+    if (isAuthenticated) {
+      loadInitialData(true);
+    }
+  }, [isAuthenticated]);
 
   const loadInitialData = async (triggerAutoSync: boolean = false) => {
     try {
@@ -77,7 +83,16 @@ export function App() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
+  const handleLockApp = () => {
+    localStorage.removeItem('salaria_api_key');
+    setIsAuthenticated(false);
+  };
+
   const totalBalance = accounts.reduce((sum, a) => sum + (a.current_balance ?? a.balance ?? 0), 0);
+
+  if (!isAuthenticated) {
+    return <PinLockScreen onUnlocked={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="flex bg-slate-950 text-slate-100 min-h-screen font-sans">
@@ -86,6 +101,7 @@ export function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         totalBalance={totalBalance}
+        onLockApp={handleLockApp}
       />
 
       {/* Main Content Area */}

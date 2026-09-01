@@ -23,6 +23,7 @@
   },
   "vars": {
     "AI_MODEL": "@cf/meta/llama-3.2-3b-instruct",
-    "API_KEY": "salaria_secret_2026"
+    "API_KEY": "salaria_secret_2026",
+    "MASTER_PIN": "112358"
   }
 }
