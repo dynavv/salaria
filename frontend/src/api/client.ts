@@ -8,12 +8,23 @@ import {
   MultiMonthComparison 
 } from '../types';
 
-const API_BASE = '/api';
+const RAW_API_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE = RAW_API_URL ? `${RAW_API_URL.replace(/\/$/, '')}/api` : '/api';
+
+function getAuthHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
+  const apiKey = localStorage.getItem('salaria_api_key') || 'salaria_secret_2026';
+  return {
+    'x-api-key': apiKey,
+    ...customHeaders,
+  };
+}
 
 export const api = {
   // Accounts
   async getAccounts(): Promise<Account[]> {
-    const res = await fetch(`${API_BASE}/accounts`);
+    const res = await fetch(`${API_BASE}/accounts`, {
+      headers: getAuthHeaders()
+    });
     const data = await res.json();
     return data.data || [];
   },
@@ -21,7 +32,7 @@ export const api = {
   async createAccount(payload: Partial<Account>): Promise<Account> {
     const res = await fetch(`${API_BASE}/accounts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     return (await res.json()).data;
@@ -30,19 +41,22 @@ export const api = {
   async updateAccount(id: string, payload: Partial<Account>): Promise<void> {
     await fetch(`${API_BASE}/accounts/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
   },
 
   async deleteAccount(id: string): Promise<void> {
-    await fetch(`${API_BASE}/accounts/${id}`, { method: 'DELETE' });
+    await fetch(`${API_BASE}/accounts/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
   },
 
   // Categories
   async getCategories(type?: 'expense' | 'income'): Promise<Category[]> {
     const url = type ? `${API_BASE}/categories?type=${type}` : `${API_BASE}/categories`;
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: getAuthHeaders() });
     const data = await res.json();
     return data.data || [];
   },
@@ -50,7 +64,7 @@ export const api = {
   async createCategory(payload: Partial<Category>): Promise<Category> {
     const res = await fetch(`${API_BASE}/categories`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     return (await res.json()).data;
@@ -83,7 +97,9 @@ export const api = {
     if (params?.limit) query.set('limit', String(params.limit));
     if (params?.offset) query.set('offset', String(params.offset));
 
-    const res = await fetch(`${API_BASE}/transactions?${query.toString()}`);
+    const res = await fetch(`${API_BASE}/transactions?${query.toString()}`, {
+      headers: getAuthHeaders()
+    });
     const json = await res.json();
     return {
       transactions: json.data || [],
@@ -94,7 +110,7 @@ export const api = {
   async createTransaction(payload: any): Promise<any> {
     const res = await fetch(`${API_BASE}/transactions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     return await res.json();
@@ -103,17 +119,23 @@ export const api = {
   async updateTransaction(id: string, payload: any): Promise<void> {
     await fetch(`${API_BASE}/transactions/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
   },
 
   async deleteTransaction(id: string): Promise<void> {
-    await fetch(`${API_BASE}/transactions/${id}`, { method: 'DELETE' });
+    await fetch(`${API_BASE}/transactions/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
   },
 
   async clearAllTransactions(): Promise<{ message: string }> {
-    const res = await fetch(`${API_BASE}/transactions/clear-all`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/transactions/clear-all`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     return await res.json();
   },
 
@@ -125,6 +147,7 @@ export const api = {
 
     const res = await fetch(`${API_BASE}/import/telegram-html`, {
       method: 'POST',
+      headers: getAuthHeaders(),
       body: formData
     });
     const json = await res.json();
@@ -135,7 +158,7 @@ export const api = {
   async parseTelegramText(htmlContent: string, defaultAccountId: string = 'acc_cash'): Promise<TelegramParseResult> {
     const res = await fetch(`${API_BASE}/import/telegram-html`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ htmlContent, defaultAccountId })
     });
     const json = await res.json();
@@ -146,7 +169,7 @@ export const api = {
   async confirmImport(transactions: any[]): Promise<{ savedCount: number; message: string }> {
     const res = await fetch(`${API_BASE}/import/confirm`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ transactions })
     });
     const json = await res.json();
@@ -155,13 +178,17 @@ export const api = {
   },
 
   async getSampleTelegramHtml(): Promise<string> {
-    const res = await fetch(`${API_BASE}/import/sample-html`);
+    const res = await fetch(`${API_BASE}/import/sample-html`, {
+      headers: getAuthHeaders()
+    });
     return await res.text();
   },
 
   // Analytics & Insights
   async getMonthlyStats(month: string): Promise<MonthlyStats> {
-    const res = await fetch(`${API_BASE}/analytics/monthly?month=${month}`);
+    const res = await fetch(`${API_BASE}/analytics/monthly?month=${month}`, {
+      headers: getAuthHeaders()
+    });
     const json = await res.json();
     return json.data;
   },
@@ -170,7 +197,7 @@ export const api = {
     const url = months && months.length > 0
       ? `${API_BASE}/analytics/comparison?months=${months.join(',')}`
       : `${API_BASE}/analytics/comparison`;
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: getAuthHeaders() });
     const json = await res.json();
     return json.data;
   },
@@ -178,13 +205,15 @@ export const api = {
   async getAdvisor(month: string, prevMonth?: string): Promise<FinancialHealthAnalysis> {
     let url = `${API_BASE}/analytics/advisor?month=${month}`;
     if (prevMonth) url += `&prevMonth=${prevMonth}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: getAuthHeaders() });
     const json = await res.json();
     return json.data;
   },
 
   async getAvailableMonths(): Promise<string[]> {
-    const res = await fetch(`${API_BASE}/analytics/available-months`);
+    const res = await fetch(`${API_BASE}/analytics/available-months`, {
+      headers: getAuthHeaders()
+    });
     const json = await res.json();
     return json.data || [];
   },
@@ -192,7 +221,7 @@ export const api = {
   async askAiAdvisor(question: string, month: string, apiKey?: string): Promise<{ answer: string; modelUsed: string }> {
     const res = await fetch(`${API_BASE}/analytics/ai-ask`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ question, month, apiKey })
     });
     const json = await res.json();
@@ -209,7 +238,9 @@ export const api = {
     lastSyncTime?: string;
     maskedToken: string;
   }> {
-    const res = await fetch(`${API_BASE}/telegram/config`);
+    const res = await fetch(`${API_BASE}/telegram/config`, {
+      headers: getAuthHeaders()
+    });
     const json = await res.json();
     return json.data;
   },
@@ -221,7 +252,7 @@ export const api = {
   }): Promise<{ message: string; botUsername?: string }> {
     const res = await fetch(`${API_BASE}/telegram/config`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(config)
     });
     const json = await res.json();
@@ -232,7 +263,7 @@ export const api = {
   async testTelegramBot(botToken: string): Promise<{ success: boolean; botName?: string; username?: string; message?: string }> {
     const res = await fetch(`${API_BASE}/telegram/test`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ botToken })
     });
     const json = await res.json();
@@ -243,7 +274,7 @@ export const api = {
   async syncTelegram(): Promise<{ syncedCount: number; transactions: any[]; message: string }> {
     const res = await fetch(`${API_BASE}/telegram/sync`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' })
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Lỗi khi đồng bộ Telegram');
@@ -258,7 +289,7 @@ export const api = {
   async importBackup(data: any): Promise<{ message: string }> {
     const res = await fetch(`${API_BASE}/backup/import-json`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ data })
     });
     return await res.json();

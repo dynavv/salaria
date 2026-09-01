@@ -1,19 +1,15 @@
 /**
  * ==============================================================================
- * 💎 SALARIA CLOUDFLARE EDGE WORKER WITH D1 DATABASE & WORKERS AI ENGINE
+ * 💎 SALARIA — 100% SERVERLESS CLOUDFLARE EDGE WORKER & D1 REST API SERVER
  * ==============================================================================
- * 100% Native Cloudflare Ecosystem (Zero External Dependency, Zero Latency)
- *
- * Hybrid Categorization Architecture:
- * - Layer 1: Fast-Path Regex (0ms, 0đ - Word-Boundary & D1 Keyword Matching)
- * - Layer 2: Native Workers AI Engine with Multi-Model Fallback Chain:
- *            1. @cf/meta/llama-3.2-3b-instruct (Primary)
- *            2. @cf/meta/llama-3.2-1b-instruct (Secondary Fallback)
- *            3. @cf/mistralai/mistral-small-24b-instruct-2501 (Tertiary Fallback)
- * - Layer 3: Data Safety Fallback (Confidence < 0.75 or ambiguous -> category_id = NULL)
+ * Native Cloudflare Full-Stack Architecture:
+ * - Database: Cloudflare D1 (salarini-db)
+ * - AI Engine: Cloudflare Workers AI (Llama 3.2 3B + Multi-Model Fallback Chain)
+ * - Web App REST API: Full CRUD for Transactions, Accounts, Categories, Analytics & AI
+ * - Ingestion: MacroDroid Webhook + Telegram Bot Webhook 24/7
  */
 
-// Helper: Normalize Vietnamese text (remove accents and special chars)
+// Helper: Normalize Vietnamese text
 function normalizeText(text) {
   return (text || '')
     .toLowerCase()
@@ -24,7 +20,7 @@ function normalizeText(text) {
     .trim();
 }
 
-// Check system noise / promotions to filter out spam notifications
+// Check system noise / promotions
 function isNoiseMessage(text) {
   const norm = (text || '').toLowerCase();
   const noise = [
@@ -44,7 +40,6 @@ function parseMoneyAndNote(rawText) {
   const line = (rawText || '').trim();
   if (!line || isNoiseMessage(line)) return null;
 
-  // Clean balance/limit info to avoid confusing balance with transaction amount
   const cleanAmtLine = line.replace(/(?:Số dư khả dụng|So du kha dung|Số dư|So du|Hạn mức khả dụng|Han muc kha dung|HM khả dụng|HM kha dung|\bHM\b|Hạn mức|Han muc|\bSD\b)\s*[:\s]*[+-]?\s*[\d.,]+\s*(?:VND|vnd|đ|d|₫|\$|USD)?.*?(?=(?:\bND\b|Nội dung|Noi dung|\bGD\b|tại|tai)|$)/gis, ' ');
 
   let explicitType = null;
@@ -139,10 +134,7 @@ function parseMoneyAndNote(rawText) {
 
   if (!amount || amount <= 0) return null;
 
-  // Derive final transaction type
   const type = explicitType || 'expense';
-
-  // Extract clean note
   let note = line;
   if (matchedStr) {
     note = note.replace(matchedStr, ' ');
@@ -160,7 +152,7 @@ function parseMoneyAndNote(rawText) {
   return { amount, type, note };
 }
 
-// Layer 1: Match Category from keywords in D1 (Fast-Path with strict word boundary for single & multi-word)
+// Layer 1: Fast-Path Word-Boundary Keyword Matching
 function matchCategoryFast(note, categories) {
   const normNote = ` ${normalizeText(note)} `;
   for (const cat of categories) {
@@ -168,7 +160,6 @@ function matchCategoryFast(note, categories) {
     const kwList = cat.keywords.split(',').map(k => normalizeText(k)).filter(Boolean);
     for (const kw of kwList) {
       if (!kw) continue;
-      // Convert keyword to strict word-boundary regex (handles multi-word without partial collision)
       const escaped = kw.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
       const regex = new RegExp(`(?:^|\\s|[.,;!?:/-])${escaped}(?:$|\\s|[.,;!?:/-])`, 'i');
       if (regex.test(normNote)) {
@@ -215,14 +206,12 @@ async function categorizeWithWorkersAI(aiBinding, text, categories, preferredMod
   if (!aiBinding || !text || !categories || categories.length === 0) return null;
 
   const systemPrompt = buildAIPrompt(text, categories);
-
-  // Fallback Chain: Llama 3.2 3B -> Llama 3.2 1B -> Mistral Small
   const candidateModels = [
     preferredModel,
     '@cf/meta/llama-3.2-3b-instruct',
     '@cf/meta/llama-3.2-1b-instruct',
     '@cf/mistralai/mistral-small-24b-instruct-2501'
-  ].filter((v, i, a) => a.indexOf(v) === i); // remove duplicates
+  ].filter((v, i, a) => a.indexOf(v) === i);
 
   for (const model of candidateModels) {
     try {
@@ -235,12 +224,10 @@ async function categorizeWithWorkersAI(aiBinding, text, categories, preferredMod
         max_tokens: 256
       });
 
-      // 1. Direct object response
       if (response?.response && typeof response.response === 'object' && response.response.category_id !== undefined) {
         return { ...response.response, model_used: model };
       }
 
-      // 2. Text response in response.response
       const rawText = typeof response?.response === 'string'
         ? response.response
         : (response?.choices?.[0]?.message?.content || '');
@@ -253,7 +240,7 @@ async function categorizeWithWorkersAI(aiBinding, text, categories, preferredMod
         }
       }
     } catch (err) {
-      console.warn(`[Workers AI Fallback] Model ${model} failed, switching to next candidate:`, err.message);
+      console.warn(`[Workers AI Fallback] Model ${model} failed:`, err.message);
     }
   }
 
@@ -299,7 +286,7 @@ export default {
     // CORS Headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, x-telegram-bot-api-secret-token',
     };
 
@@ -307,120 +294,607 @@ export default {
       return new Response(null, { headers: corsHeaders, status: 204 });
     }
 
-    // Check MacroDroid Query params (?text=, ?title=&text=)
-    const title = url.searchParams.get('title') || url.searchParams.get('not_title') || '';
-    const rawParamText = url.searchParams.get('text') || url.searchParams.get('msg') || url.searchParams.get('body') || url.searchParams.get('not_text') || '';
-    const queryText = (title && rawParamText) ? `${title} ${rawParamText}` : (rawParamText || title);
+    const jsonResponse = (data, status = 200) => {
+      return new Response(JSON.stringify(data), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    };
 
     // =========================================================================
     // 1. HEALTH / STATUS CHECK
     // =========================================================================
-    if ((url.pathname === '/' || url.pathname === '/health' || url.pathname === '/api/status') && !queryText && request.method === 'GET') {
+    if ((url.pathname === '/' || url.pathname === '/health' || url.pathname === '/api/status') && request.method === 'GET' && !url.searchParams.has('text')) {
       let dbStatus = 'Disconnected';
       let totalTransactions = 0;
-      let pendingSync = 0;
 
       if (env.DB) {
         try {
           const countRes = await env.DB.prepare('SELECT COUNT(*) as count FROM transactions').first();
-          const pendingRes = await env.DB.prepare('SELECT COUNT(*) as count FROM transactions WHERE is_synced = 0').first();
           totalTransactions = countRes?.count || 0;
-          pendingSync = pendingRes?.count || 0;
           dbStatus = 'Connected (Cloudflare D1)';
         } catch (e) {
           dbStatus = `Error: ${e.message}`;
         }
       }
 
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: true,
-        service: 'Salaria Cloudflare D1 Edge Worker',
+        service: 'Salaria Cloudflare D1 Full-Stack REST API & Edge Worker',
         database: dbStatus,
         ai_engine: env.AI ? `Active (Workers AI: ${AI_MODEL})` : 'Disabled',
-        stats: {
-          total_transactions: totalTransactions,
-          pending_sync_to_local: pendingSync
-        },
+        stats: { total_transactions: totalTransactions },
         timestamp: new Date().toISOString()
-      }, null, 2), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     // =========================================================================
-    // 2. LOCAL SYNC ENDPOINTS (For Local Node.js Server to pull & ack)
+    // 2. ACCOUNTS API (CRUD)
     // =========================================================================
-    if (url.pathname === '/api/sync/pull') {
-      const clientKey = request.headers.get('x-api-key') || url.searchParams.get('token') || url.searchParams.get('key');
-      if (!checkApiKey(clientKey)) {
-        return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid API Key' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+    if (url.pathname === '/api/accounts' && request.method === 'GET') {
+      if (!env.DB) return jsonResponse({ success: false, error: 'Database not bound' }, 500);
+      const accounts = await env.DB.prepare('SELECT * FROM accounts ORDER BY is_default DESC, name ASC').all();
+      return jsonResponse({ success: true, data: accounts.results || [] });
+    }
+
+    if (url.pathname === '/api/accounts' && request.method === 'POST') {
+      const body = await request.json();
+      const id = body.id || `acc_${Date.now()}`;
+      const name = body.name || 'Tài khoản mới';
+      const type = body.type || 'cash';
+      const balance = Number(body.balance) || 0;
+      const initial_balance = Number(body.initial_balance) || balance;
+      const currency = body.currency || 'VND';
+      const icon = body.icon || 'Wallet';
+      const color = body.color || '#3b82f6';
+      const is_default = body.is_default ? 1 : 0;
+
+      await env.DB.prepare(`
+        INSERT INTO accounts (id, name, type, balance, initial_balance, currency, icon, color, is_default)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(id, name, type, balance, initial_balance, currency, icon, color, is_default).run();
+
+      return jsonResponse({ success: true, data: { id, name, type, balance, initial_balance, currency, icon, color, is_default } }, 201);
+    }
+
+    if (url.pathname.startsWith('/api/accounts/') && request.method === 'PUT') {
+      const id = url.pathname.replace('/api/accounts/', '');
+      const body = await request.json();
+      await env.DB.prepare(`
+        UPDATE accounts SET
+          name = COALESCE(?, name),
+          type = COALESCE(?, type),
+          balance = COALESCE(?, balance),
+          initial_balance = COALESCE(?, initial_balance),
+          icon = COALESCE(?, icon),
+          color = COALESCE(?, color),
+          is_default = COALESCE(?, is_default)
+        WHERE id = ?
+      `).bind(body.name, body.type, body.balance, body.initial_balance, body.icon, body.color, body.is_default, id).run();
+
+      return jsonResponse({ success: true, message: 'Account updated' });
+    }
+
+    if (url.pathname.startsWith('/api/accounts/') && request.method === 'DELETE') {
+      const id = url.pathname.replace('/api/accounts/', '');
+      await env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(id).run();
+      return jsonResponse({ success: true, message: 'Account deleted' });
+    }
+
+    // =========================================================================
+    // 3. CATEGORIES API (CRUD)
+    // =========================================================================
+    if (url.pathname === '/api/categories' && request.method === 'GET') {
+      if (!env.DB) return jsonResponse({ success: false, error: 'Database not bound' }, 500);
+      const type = url.searchParams.get('type');
+      let query = 'SELECT * FROM categories';
+      let params = [];
+      if (type) {
+        query += ' WHERE type = ?';
+        params.push(type);
+      }
+      query += ' ORDER BY group_type ASC, name ASC';
+      const res = await env.DB.prepare(query).bind(...params).all();
+      return jsonResponse({ success: true, data: res.results || [] });
+    }
+
+    if (url.pathname === '/api/categories' && request.method === 'POST') {
+      const body = await request.json();
+      const id = body.id || `cat_${Date.now()}`;
+      const name = body.name || 'Danh mục mới';
+      const type = body.type || 'expense';
+      const group_type = body.group_type || 'needs';
+      const icon = body.icon || 'Tag';
+      const color = body.color || '#64748b';
+      const keywords = body.keywords || '';
+      const budget_monthly = Number(body.budget_monthly) || 0;
+
+      await env.DB.prepare(`
+        INSERT INTO categories (id, name, type, group_type, icon, color, keywords, budget_monthly)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(id, name, type, group_type, icon, color, keywords, budget_monthly).run();
+
+      return jsonResponse({ success: true, data: { id, name, type, group_type, icon, color, keywords, budget_monthly } }, 201);
+    }
+
+    if (url.pathname.startsWith('/api/categories/') && request.method === 'PUT') {
+      const id = url.pathname.replace('/api/categories/', '');
+      const body = await request.json();
+      await env.DB.prepare(`
+        UPDATE categories SET
+          name = COALESCE(?, name),
+          type = COALESCE(?, type),
+          group_type = COALESCE(?, group_type),
+          icon = COALESCE(?, icon),
+          color = COALESCE(?, color),
+          keywords = COALESCE(?, keywords),
+          budget_monthly = COALESCE(?, budget_monthly)
+        WHERE id = ?
+      `).bind(body.name, body.type, body.group_type, body.icon, body.color, body.keywords, body.budget_monthly, id).run();
+
+      return jsonResponse({ success: true, message: 'Category updated' });
+    }
+
+    if (url.pathname.startsWith('/api/categories/') && request.method === 'DELETE') {
+      const id = url.pathname.replace('/api/categories/', '');
+      await env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+      return jsonResponse({ success: true, message: 'Category deleted' });
+    }
+
+    // =========================================================================
+    // 4. TRANSACTIONS API (CRUD & Filtering)
+    // =========================================================================
+    if (url.pathname === '/api/transactions' && request.method === 'GET') {
+      if (!env.DB) return jsonResponse({ success: false, error: 'Database not bound' }, 500);
+
+      const month = url.searchParams.get('month');
+      const date = url.searchParams.get('date');
+      const category_id = url.searchParams.get('category_id');
+      const account_id = url.searchParams.get('account_id');
+      const type = url.searchParams.get('type');
+      const group_type = url.searchParams.get('group_type');
+      const max_amount = url.searchParams.get('max_amount');
+      const search = url.searchParams.get('search');
+      const limit = parseInt(url.searchParams.get('limit') || '500', 10);
+      const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+      let conditions = [];
+      let params = [];
+
+      if (month) {
+        conditions.push("substr(t.date, 1, 7) = ?");
+        params.push(month);
+      }
+      if (date) {
+        conditions.push("t.date = ?");
+        params.push(date);
+      }
+      if (category_id) {
+        conditions.push("t.category_id = ?");
+        params.push(category_id);
+      }
+      if (account_id) {
+        conditions.push("t.account_id = ?");
+        params.push(account_id);
+      }
+      if (type) {
+        conditions.push("t.type = ?");
+        params.push(type);
+      }
+      if (group_type) {
+        conditions.push("c.group_type = ?");
+        params.push(group_type);
+      }
+      if (max_amount) {
+        conditions.push("t.amount <= ?");
+        params.push(Number(max_amount));
+      }
+      if (search) {
+        conditions.push("(t.note LIKE ? OR c.name LIKE ? OR a.name LIKE ?)");
+        const searchPattern = `%${search}%`;
+        params.push(searchPattern, searchPattern, searchPattern);
       }
 
-      if (!env.DB) {
-        return new Response(JSON.stringify({ success: false, error: 'D1 Database not bound' }), { status: 500 });
-      }
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-      // Fetch pending transactions
-      const txs = await env.DB.prepare(`
-        SELECT t.*, c.name as category_name, a.name as account_name
+      const query = `
+        SELECT 
+          t.*,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color,
+          c.group_type as category_group_type,
+          a.name as account_name,
+          a.icon as account_icon,
+          a.color as account_color,
+          da.name as destination_account_name
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
         LEFT JOIN accounts a ON t.account_id = a.id
-        WHERE t.is_synced = 0
-        ORDER BY t.created_at ASC
-      `).all();
+        LEFT JOIN accounts da ON t.destination_account_id = da.id
+        ${whereClause}
+        ORDER BY t.date DESC, t.created_at DESC
+        LIMIT ? OFFSET ?
+      `;
 
-      const categories = await env.DB.prepare('SELECT * FROM categories').all();
-      const accounts = await env.DB.prepare('SELECT * FROM accounts').all();
+      params.push(limit, offset);
+      const rows = await env.DB.prepare(query).bind(...params).all();
 
-      return new Response(JSON.stringify({
+      // Available months
+      const monthsRes = await env.DB.prepare("SELECT DISTINCT substr(date, 1, 7) as month FROM transactions ORDER BY month DESC").all();
+      const availableMonths = (monthsRes.results || []).map(r => r.month).filter(Boolean);
+
+      return jsonResponse({
         success: true,
-        data: {
-          transactions: txs.results || [],
-          categories: categories.results || [],
-          accounts: accounts.results || []
-        }
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        data: rows.results || [],
+        availableMonths: availableMonths.length > 0 ? availableMonths : [new Date().toISOString().substring(0, 7)]
       });
     }
 
-    if (url.pathname === '/api/sync/ack' && request.method === 'POST') {
-      const clientKey = request.headers.get('x-api-key') || url.searchParams.get('token') || url.searchParams.get('key');
-      if (!checkApiKey(clientKey)) {
-        return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid API Key' }), { status: 401 });
+    if (url.pathname === '/api/transactions' && request.method === 'POST') {
+      const body = await request.json();
+      const id = body.id || `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const date = body.date || new Date().toISOString().split('T')[0];
+      const amount = Number(body.amount) || 0;
+      const type = body.type || 'expense';
+      const category_id = body.category_id || null;
+      const account_id = body.account_id || 'acc_cash';
+      const destination_account_id = body.destination_account_id || null;
+      const note = body.note || '';
+      const source = body.source || 'manual';
+
+      await env.DB.prepare(`
+        INSERT INTO transactions (id, date, amount, type, category_id, account_id, destination_account_id, note, source, is_synced)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+      `).bind(id, date, amount, type, category_id, account_id, destination_account_id, note, source).run();
+
+      // Update account balance
+      if (type === 'expense') {
+        await env.DB.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').bind(amount, account_id).run();
+      } else if (type === 'income') {
+        await env.DB.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').bind(amount, account_id).run();
+      } else if (type === 'transfer' && destination_account_id) {
+        await env.DB.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').bind(amount, account_id).run();
+        await env.DB.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').bind(amount, destination_account_id).run();
       }
 
-      try {
-        const body = await request.json();
-        const ids = body.ids || [];
-        if (Array.isArray(ids) && ids.length > 0 && env.DB) {
-          const placeholders = ids.map(() => '?').join(',');
-          await env.DB.prepare(`UPDATE transactions SET is_synced = 1 WHERE id IN (${placeholders})`).bind(...ids).run();
+      return jsonResponse({ success: true, data: { id, date, amount, type, category_id, account_id, note } }, 201);
+    }
+
+    if (url.pathname.startsWith('/api/transactions/') && request.method === 'PUT') {
+      const id = url.pathname.replace('/api/transactions/', '');
+      const body = await request.json();
+
+      // Fetch old transaction to revert balance
+      const oldTx = await env.DB.prepare('SELECT * FROM transactions WHERE id = ?').bind(id).first();
+      if (oldTx) {
+        if (oldTx.type === 'expense') {
+          await env.DB.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').bind(oldTx.amount, oldTx.account_id).run();
+        } else if (oldTx.type === 'income') {
+          await env.DB.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').bind(oldTx.amount, oldTx.account_id).run();
         }
-        return new Response(JSON.stringify({ success: true, acknowledgedCount: ids.length }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500 });
       }
+
+      const newDate = body.date || oldTx?.date;
+      const newAmount = Number(body.amount) !== undefined ? Number(body.amount) : oldTx?.amount;
+      const newType = body.type || oldTx?.type;
+      const newCategoryId = body.category_id !== undefined ? body.category_id : oldTx?.category_id;
+      const newAccountId = body.account_id || oldTx?.account_id;
+      const newNote = body.note !== undefined ? body.note : oldTx?.note;
+
+      await env.DB.prepare(`
+        UPDATE transactions SET
+          date = ?,
+          amount = ?,
+          type = ?,
+          category_id = ?,
+          account_id = ?,
+          note = ?
+        WHERE id = ?
+      `).bind(newDate, newAmount, newType, newCategoryId, newAccountId, newNote, id).run();
+
+      // Apply new balance
+      if (newType === 'expense') {
+        await env.DB.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').bind(newAmount, newAccountId).run();
+      } else if (newType === 'income') {
+        await env.DB.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').bind(newAmount, newAccountId).run();
+      }
+
+      return jsonResponse({ success: true, message: 'Transaction updated' });
+    }
+
+    if (url.pathname.startsWith('/api/transactions/') && request.method === 'DELETE') {
+      const id = url.pathname.replace('/api/transactions/', '');
+      if (id === 'clear-all') {
+        await env.DB.prepare('DELETE FROM transactions').run();
+        // Reset balances to initial_balance
+        await env.DB.prepare('UPDATE accounts SET balance = initial_balance').run();
+        return jsonResponse({ success: true, message: 'All transactions cleared and accounts reset' });
+      }
+
+      const oldTx = await env.DB.prepare('SELECT * FROM transactions WHERE id = ?').bind(id).first();
+      if (oldTx) {
+        if (oldTx.type === 'expense') {
+          await env.DB.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').bind(oldTx.amount, oldTx.account_id).run();
+        } else if (oldTx.type === 'income') {
+          await env.DB.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').bind(oldTx.amount, oldTx.account_id).run();
+        }
+        await env.DB.prepare('DELETE FROM transactions WHERE id = ?').bind(id).run();
+      }
+      return jsonResponse({ success: true, message: 'Transaction deleted' });
     }
 
     // =========================================================================
-    // 3. INGESTION: MACRODROID & TELEGRAM WEBHOOK
+    // 5. ANALYTICS & FINANCIAL HEALTH API
+    // =========================================================================
+    if (url.pathname === '/api/analytics/available-months' && request.method === 'GET') {
+      const monthsRes = await env.DB.prepare("SELECT DISTINCT substr(date, 1, 7) as month FROM transactions ORDER BY month DESC").all();
+      const months = (monthsRes.results || []).map(r => r.month).filter(Boolean);
+      return jsonResponse({ success: true, data: months.length > 0 ? months : [new Date().toISOString().substring(0, 7)] });
+    }
+
+    if (url.pathname === '/api/analytics/monthly' && request.method === 'GET') {
+      const month = url.searchParams.get('month') || new Date().toISOString().substring(0, 7);
+
+      const txsRes = await env.DB.prepare(`
+        SELECT t.*, c.name as category_name, c.group_type as category_group_type, c.color as category_color, c.icon as category_icon, c.budget_monthly
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE substr(t.date, 1, 7) = ?
+        ORDER BY t.date ASC
+      `).bind(month).all();
+
+      const txs = txsRes.results || [];
+
+      let totalIncome = 0;
+      let totalExpense = 0;
+      let needsExpense = 0;
+      let wantsExpense = 0;
+
+      const categoryMap = new Map();
+      const dailyMap = new Map();
+
+      for (const t of txs) {
+        const amt = Number(t.amount) || 0;
+        if (t.type === 'income') {
+          totalIncome += amt;
+        } else if (t.type === 'expense') {
+          totalExpense += amt;
+          const grp = t.category_group_type || 'needs';
+          if (grp === 'needs') needsExpense += amt;
+          else if (grp === 'wants') wantsExpense += amt;
+
+          // Category stats
+          const catId = t.category_id || 'uncategorized';
+          const catName = t.category_name || 'Chưa phân loại';
+          const catColor = t.category_color || '#94a3b8';
+          const catIcon = t.category_icon || 'Tag';
+          const catBudget = Number(t.budget_monthly) || 0;
+
+          if (!categoryMap.has(catId)) {
+            categoryMap.set(catId, {
+              categoryId: catId,
+              categoryName: catName,
+              color: catColor,
+              icon: catIcon,
+              amount: 0,
+              budget: catBudget
+            });
+          }
+          categoryMap.get(catId).amount += amt;
+
+          // Daily stats
+          const d = t.date;
+          if (!dailyMap.has(d)) dailyMap.set(d, 0);
+          dailyMap.set(d, dailyMap.get(d) + amt);
+        }
+      }
+
+      const netSavings = totalIncome - totalExpense;
+      const savingsRate = totalIncome > 0 ? Math.round((netSavings / totalIncome) * 100) : 0;
+
+      // Category breakdown
+      const categories = Array.from(categoryMap.values()).map(c => ({
+        ...c,
+        percentage: totalExpense > 0 ? Math.round((c.amount / totalExpense) * 100) : 0
+      })).sort((a, b) => b.amount - a.amount);
+
+      // Daily spending array
+      const daysInMonth = new Date(parseInt(month.split('-')[0], 10), parseInt(month.split('-')[1], 10), 0).getDate();
+      const dailySpending = [];
+      const dailyAvg = daysInMonth > 0 ? Math.round(totalExpense / daysInMonth) : 0;
+
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dayStr = `${month}-${String(i).padStart(2, '0')}`;
+        const amt = dailyMap.get(dayStr) || 0;
+        let status = 'normal';
+        if (amt > dailyAvg * 2 && amt > 100000) status = 'spike';
+        else if (amt > dailyAvg * 1.3 && amt > 50000) status = 'high';
+
+        dailySpending.push({
+          date: dayStr,
+          day: i,
+          amount: amt,
+          status
+        });
+      }
+
+      // Safe daily spending
+      const now = new Date();
+      const currentDay = now.toISOString().substring(0, 7) === month ? now.getDate() : daysInMonth;
+      const remainingDays = Math.max(1, daysInMonth - currentDay + 1);
+      const targetSavings = totalIncome * 0.2;
+      const maxAllowedExpense = Math.max(0, totalIncome - targetSavings);
+      const safeDailySpendingRemaining = Math.max(0, Math.round((maxAllowedExpense - totalExpense) / remainingDays));
+
+      return jsonResponse({
+        success: true,
+        data: {
+          month,
+          totalIncome,
+          totalExpense,
+          netSavings,
+          savingsRate,
+          rule503020: {
+            needs: { amount: needsExpense, targetPercentage: 50, actualPercentage: totalIncome > 0 ? Math.round((needsExpense / totalIncome) * 100) : 0 },
+            wants: { amount: wantsExpense, targetPercentage: 30, actualPercentage: totalIncome > 0 ? Math.round((wantsExpense / totalIncome) * 100) : 0 },
+            savings: { amount: netSavings, targetPercentage: 20, actualPercentage: savingsRate }
+          },
+          burnRate: {
+            dailyAverage: dailyAvg,
+            projectedMonthlyExpense: dailyAvg * daysInMonth,
+            safeDailySpendingRemaining
+          },
+          categories,
+          dailySpending
+        }
+      });
+    }
+
+    if (url.pathname === '/api/analytics/advisor' && request.method === 'GET') {
+      const month = url.searchParams.get('month') || new Date().toISOString().substring(0, 7);
+
+      const txsRes = await env.DB.prepare(`
+        SELECT t.*, c.name as category_name
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE substr(t.date, 1, 7) = ? AND t.type = 'expense'
+      `).bind(month).all();
+
+      const txs = txsRes.results || [];
+      const smallExpenses = txs.filter(t => (Number(t.amount) || 0) <= 60000);
+      const totalSmall = smallExpenses.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const totalExpense = txs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+      // Financial health score
+      let score = 70;
+      if (totalExpense > 0) {
+        if (totalSmall / totalExpense > 0.25) score -= 15;
+        else if (totalSmall / totalExpense < 0.1) score += 10;
+      }
+      score = Math.max(20, Math.min(98, score));
+
+      return jsonResponse({
+        success: true,
+        data: {
+          month,
+          healthScore: score,
+          latteFactor: {
+            threshold: 60000,
+            count: smallExpenses.length,
+            totalSmallExpenses: totalSmall,
+            percentageOfTotalExpense: totalExpense > 0 ? Math.round((totalSmall / totalExpense) * 100) : 0,
+            items: smallExpenses.slice(0, 10).map(t => ({ note: t.note, amount: t.amount, date: t.date }))
+          }
+        }
+      });
+    }
+
+    if (url.pathname === '/api/analytics/ai-ask' && request.method === 'POST') {
+      const body = await request.json();
+      const question = body.question || 'Làm sao để tối ưu chi tiêu tháng này?';
+      const month = body.month || new Date().toISOString().substring(0, 7);
+
+      const txsRes = await env.DB.prepare(`
+        SELECT t.date, t.amount, t.type, t.note, c.name as category_name
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE substr(t.date, 1, 7) = ?
+        ORDER BY t.date DESC
+        LIMIT 50
+      `).bind(month).all();
+
+      const summaryList = (txsRes.results || []).map(t => `- ${t.date}: ${t.type === 'income' ? '+' : '-'}${t.amount} (${t.category_name || 'Khác'}) - ${t.note}`).join('\n');
+
+      let answer = 'Bạn nên theo dõi sát quy tắc 50/30/20 và hạn chế các khoản chi lặt vặt dưới 60.000₫ hàng ngày.';
+      let modelUsed = 'Workers AI Heuristic';
+
+      if (env.AI) {
+        try {
+          const sysPrompt = `Bạn là Cố Vấn Tài Chính Cá Nhân AI (AI Financial Advisor) chuyên nghiệp của Salaria.
+Dữ liệu chi tiêu tháng ${month}:
+${summaryList}
+
+Nhiệm vụ: Trả lời câu hỏi người dùng sắc bén, thực tế, bằng tiếng Việt định dạng Markdown gọn gàng.`;
+
+          const aiRes = await env.AI.run('@cf/meta/llama-3.2-3b-instruct', {
+            messages: [
+              { role: 'system', content: sysPrompt },
+              { role: 'user', content: question }
+            ],
+            temperature: 0.7,
+            max_tokens: 600
+          });
+
+          const rawText = typeof aiRes?.response === 'string' ? aiRes.response : (aiRes?.choices?.[0]?.message?.content || '');
+          if (rawText) {
+            answer = rawText;
+            modelUsed = 'Workers AI (Llama 3.2 3B)';
+          }
+        } catch (e) {
+          console.warn('AI Advisor error:', e.message);
+        }
+      }
+
+      return jsonResponse({
+        success: true,
+        data: { answer, modelUsed }
+      });
+    }
+
+    // =========================================================================
+    // 6. BACKUP & EXPORT/IMPORT API
+    // =========================================================================
+    if (url.pathname === '/api/backup/export-json' && request.method === 'GET') {
+      const accounts = await env.DB.prepare('SELECT * FROM accounts').all();
+      const categories = await env.DB.prepare('SELECT * FROM categories').all();
+      const transactions = await env.DB.prepare('SELECT * FROM transactions').all();
+      const budgets = await env.DB.prepare('SELECT * FROM budgets').all();
+
+      return jsonResponse({
+        version: '2026.1',
+        exported_at: new Date().toISOString(),
+        data: {
+          accounts: accounts.results || [],
+          categories: categories.results || [],
+          transactions: transactions.results || [],
+          budgets: budgets.results || []
+        }
+      });
+    }
+
+    if (url.pathname === '/api/backup/import-json' && request.method === 'POST') {
+      const body = await request.json();
+      const backupData = body.data?.data || body.data || body;
+      const txs = backupData.transactions || [];
+
+      if (Array.isArray(txs) && txs.length > 0) {
+        for (const t of txs) {
+          await env.DB.prepare(`
+            INSERT OR REPLACE INTO transactions (id, date, amount, type, category_id, account_id, destination_account_id, note, source, is_synced)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+          `).bind(t.id, t.date, t.amount, t.type, t.category_id, t.account_id, t.destination_account_id || null, t.note, t.source || 'backup_import').run();
+        }
+      }
+
+      return jsonResponse({ success: true, message: `Imported ${txs.length} transactions successfully` });
+    }
+
+    // =========================================================================
+    // 7. INGESTION: MACRODROID & TELEGRAM WEBHOOK (24/7)
     // =========================================================================
     const reqApiKey = request.headers.get('x-api-key') ||
       request.headers.get('x-telegram-bot-api-secret-token') ||
       url.searchParams.get('token') ||
       url.searchParams.get('key');
-    if (reqApiKey && !checkApiKey(reqApiKey)) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid API Key' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+
+    // MacroDroid Query params
+    const title = url.searchParams.get('title') || url.searchParams.get('not_title') || '';
+    const rawParamText = url.searchParams.get('text') || url.searchParams.get('msg') || url.searchParams.get('body') || url.searchParams.get('not_text') || '';
+    const queryText = (title && rawParamText) ? `${title} ${rawParamText}` : (rawParamText || title);
+
+    if (reqApiKey && !checkApiKey(reqApiKey) && !queryText) {
+      return jsonResponse({ success: false, error: 'Unauthorized: Invalid API Key' }, 401);
     }
 
     let rawText = '';
@@ -435,7 +909,6 @@ export default {
       try {
         const body = await request.json();
         if (body.message || body.edited_message) {
-          // Telegram Webhook format
           const msg = body.message || body.edited_message;
           rawText = msg.text || '';
           chatId = String(msg.chat?.id || ALLOWED_CHAT_ID);
@@ -450,17 +923,15 @@ export default {
     }
 
     if (!rawText || !rawText.trim()) {
-      return new Response('Salaria Edge Worker Active. No transaction text provided.', { status: 200 });
+      return new Response('Salaria Cloudflare D1 Full-Stack REST API & Edge Worker Active.', { status: 200 });
     }
 
-    // Process Transaction & Store in D1
     if (env.DB) {
       const parsed = parseMoneyAndNote(rawText);
       const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const today = new Date().toISOString().split('T')[0];
 
       if (parsed) {
-        // Fetch categories from D1
         let categories = [];
         try {
           const catsRes = await env.DB.prepare('SELECT id, name, type, group_type, keywords FROM categories').all();
@@ -469,28 +940,25 @@ export default {
           console.error('Failed to load categories:', e);
         }
 
-        // TẦNG 1: Khớp từ khóa nhanh (Fast Path - 0ms)
+        // TẦNG 1: Fast-Path Regex
         let catId = matchCategoryFast(parsed.note, categories);
         let categorizationMethod = catId ? 'fast_regex' : 'unassigned';
         let finalNote = parsed.note;
 
-        // TẦNG 2: Cloudflare Workers AI với Multi-Model Fallback
+        // TẦNG 2: Cloudflare Workers AI Llama-3.2 Fallback
         if (!catId && env.AI) {
           try {
             const aiResult = await categorizeWithWorkersAI(env.AI, rawText, categories, AI_MODEL);
             if (aiResult) {
               const shortModelName = (aiResult.model_used || AI_MODEL).replace('@cf/meta/', '').replace('@cf/mistralai/', '');
-              // Chỉ nhận category nếu độ tin cậy >= 0.75
               if (aiResult.category_id && Number(aiResult.confidence) >= 0.75) {
                 const validCat = categories.find(c => c.id === aiResult.category_id);
                 if (validCat) {
                   catId = aiResult.category_id;
                   categorizationMethod = `workers_ai (${shortModelName}) (${Math.round(aiResult.confidence * 100)}%)`;
                 }
-              } else {
-                categorizationMethod = `unassigned (ai_confidence: ${Math.round((aiResult.confidence || 0) * 100)}%)`;
               }
-              if (aiResult.clean_note && aiResult.clean_note.length > 0) {
+              if (aiResult.clean_note && aiResult.clean_note.length > 0 && aiResult.clean_note !== 'Ăn uống') {
                 finalNote = aiResult.clean_note;
               }
             }
@@ -501,11 +969,11 @@ export default {
 
         const accountId = isBankNoti ? 'acc_bank' : 'acc_cash';
 
-        // Ghi trực tiếp vào D1 Database (category_id có thể là NULL nếu chưa phân loại)
+        // Ghi trực tiếp vào D1 Database
         await env.DB.prepare(`
           INSERT INTO transactions (
             id, date, amount, type, category_id, account_id, note, source, raw_telegram_text, telegram_message_id, telegram_chat_id, is_synced
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
         `).bind(
           txId,
           today,
@@ -520,7 +988,14 @@ export default {
           chatId
         ).run();
 
-        // Gửi tin nhắn xác nhận qua Telegram
+        // Cập nhật số dư tài khoản
+        if (parsed.type === 'expense') {
+          await env.DB.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').bind(parsed.amount, accountId).run();
+        } else if (parsed.type === 'income') {
+          await env.DB.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').bind(parsed.amount, accountId).run();
+        }
+
+        // Gửi Telegram phản hồi
         if (TELEGRAM_BOT_TOKEN && chatId) {
           const sign = parsed.type === 'income' ? '🟢 +' : '🔴 -';
           const formattedAmt = new Intl.NumberFormat('vi-VN').format(parsed.amount) + ' ₫';
@@ -539,7 +1014,7 @@ export default {
           );
         }
 
-        return new Response(JSON.stringify({
+        return jsonResponse({
           success: true,
           data: {
             id: txId,
@@ -550,33 +1025,12 @@ export default {
             note: finalNote,
             categorized_by: categorizationMethod
           }
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } else {
-        // Fallback Alert: Parsing failed
-        if (TELEGRAM_BOT_TOKEN && chatId && !isNoiseMessage(rawText)) {
-          ctx.waitUntil(
-            sendTelegram(
-              TELEGRAM_BOT_TOKEN,
-              chatId,
-              `⚠️ <b>Không thể bóc tách giao dịch tự động:</b>\n` +
-              `<i>"${rawText}"</i>\n\n` +
-              `💡 <i>Vui lòng nhập lại đúng cú pháp (VD: <code>35k cafe</code> hoặc <code>+15tr luong</code>)</i>`
-            )
-          );
-        }
-        return new Response(JSON.stringify({ success: false, error: 'Could not parse amount from text', raw: rawText }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        return jsonResponse({ success: false, error: 'Could not parse amount from text', raw: rawText }, 400);
       }
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Processed & Saved to D1' }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ success: true, message: 'Processed' });
   }
 };
