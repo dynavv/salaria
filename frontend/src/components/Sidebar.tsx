@@ -50,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, total
           </div>
           <div>
             <h1 className="font-black text-base text-slate-100 tracking-tight">Salaria</h1>
-            <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Wealth Flow AI</p>
+            <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Smart Expense Tracker</p>
           </div>
         </div>
 
