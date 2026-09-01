@@ -9,6 +9,8 @@
     "client": "npm --prefix frontend run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build:client": "npm --prefix frontend run build",
+    "demo:load": "cp -n data/finance.db data/finance.db.real_backup 2>/dev/null || true && tsx backend/src/seedShowcaseMockup.ts",
+    "demo:restore": "if [ -f data/finance.db.real_backup ]; then cp data/finance.db.real_backup data/finance.db && rm -f data/finance.db-shm data/finance.db-wal && echo '✅ Đã khôi phục dữ liệu thật 100%!'; else echo '⚠️ Không tìm thấy file sao lưu data/finance.db.real_backup'; fi",
     "start": "tsx backend/src/index.ts"
   },
   "dependencies": {
