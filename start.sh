@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-DIR="/home/dynav/.gemini/antigravity/scratch/personal-finance-app"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PORT=3001
 URL="http://localhost:${PORT}"
 

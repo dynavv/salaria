@@ -1,28 +1,30 @@
-import React, { useState } from 'react';
-import { X, Check, Sparkles } from 'lucide-react';
-import { Account, Category } from '../types';
+import React, { useState, useEffect } from 'react';
+import { X, Check, Pencil, Sparkles } from 'lucide-react';
+import { Transaction, Account, Category } from '../types';
 import { api } from '../api/client';
 import { matchCategoryFromText } from '../utils/categoryMatcher';
 
-interface QuickAddModalProps {
+interface EditTransactionModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  transaction: Transaction | null;
   accounts: Account[];
   categories: Category[];
+  onClose: () => void;
   onSuccess: () => void;
 }
 
-export const QuickAddModal: React.FC<QuickAddModalProps> = ({
+export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   isOpen,
-  onClose,
+  transaction,
   accounts,
   categories,
+  onClose,
   onSuccess,
 }) => {
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [amount, setAmount] = useState<string>('');
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [accountId, setAccountId] = useState<string>(accounts[0]?.id || 'acc_cash');
+  const [date, setDate] = useState<string>('');
+  const [accountId, setAccountId] = useState<string>('');
   const [destAccountId, setDestAccountId] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [note, setNote] = useState<string>('');
@@ -30,9 +32,25 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const [error, setError] = useState<string>('');
   const [autoMatchedName, setAutoMatchedName] = useState<string>('');
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (transaction) {
+      setType(transaction.type || 'expense');
+      setAmount(String(transaction.amount || ''));
+      setDate(transaction.date || new Date().toISOString().split('T')[0]);
+      setAccountId(transaction.account_id || accounts[0]?.id || 'acc_cash');
+      setDestAccountId(transaction.destination_account_id || '');
+      setCategoryId(transaction.category_id || '');
+      setNote(transaction.note || '');
+      setError('');
+      setAutoMatchedName('');
+    }
+  }, [transaction, accounts]);
 
-  const filteredCategories = categories.filter((c) => c.type === (type === 'income' ? 'income' : 'expense'));
+  if (!isOpen || !transaction) return null;
+
+  const filteredCategories = categories.filter(
+    (c) => c.type === (type === 'income' ? 'income' : 'expense')
+  );
 
   const handleNoteChange = (newNote: string) => {
     setNote(newNote);
@@ -71,7 +89,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
     }
 
     if (!accountId) {
-      setError('Vui lòng chọn ví thanh toán');
+      setError('Vui lòng chọn ví/tài khoản thanh toán');
       return;
     }
 
@@ -82,24 +100,20 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
     try {
       setSubmitting(true);
-      await api.createTransaction({
+      await api.updateTransaction(transaction.id, {
         date,
         amount: numAmount,
         type,
         account_id: accountId,
         destination_account_id: type === 'transfer' ? destAccountId : null,
-        category_id: type === 'transfer' ? null : categoryId || filteredCategories[0]?.id || null,
+        category_id: type === 'transfer' ? null : categoryId || null,
         note,
-        source: 'manual',
       });
 
-      // Reset & notify
-      setAmount('');
-      setNote('');
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Lỗi khi thêm giao dịch');
+      setError(err.message || 'Lỗi khi cập nhật giao dịch');
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +124,12 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-100">Ghi nhận Giao dịch Nhanh</h2>
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+              <Pencil className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-bold text-slate-100">Chỉnh sửa Giao dịch</h2>
+          </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
@@ -127,6 +146,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
             </div>
           )}
 
+          {/* Raw Text hint if available */}
+          {transaction.raw_telegram_text && (
+            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/40 text-[11px] text-slate-400 font-mono break-all">
+              <span className="text-slate-500 font-sans font-semibold">Nội dung gốc: </span>
+              {transaction.raw_telegram_text}
+            </div>
+          )}
+
           {/* Transaction Type Segment */}
           <div className="grid grid-cols-3 gap-2 p-1 bg-slate-800/80 rounded-xl border border-slate-700/60">
             <button
@@ -138,7 +165,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Chi tiêu (Expense)
+              Chi tiêu
             </button>
             <button
               type="button"
@@ -149,7 +176,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Thu nhập (Income)
+              Thu nhập
             </button>
             <button
               type="button"
@@ -160,7 +187,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Chuyển khoản (Transfer)
+              Chuyển khoản
             </button>
           </div>
 
@@ -175,9 +202,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Ví dụ: 50000 hoặc 1500000"
-                autoFocus
                 required
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-4 pr-14 py-3 text-lg font-bold text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-4 pr-14 py-3 text-lg font-bold text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <span className="absolute right-4 top-3.5 text-xs font-semibold text-slate-400 select-none pointer-events-none">VND</span>
             </div>
@@ -192,7 +218,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-sky-500"
               />
             </div>
 
@@ -201,11 +227,11 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               <select
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-sky-500"
               >
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.name} ({acc.current_balance !== undefined ? acc.current_balance.toLocaleString('vi-VN') + '₫' : ''})
+                    {acc.name}
                   </option>
                 ))}
               </select>
@@ -220,7 +246,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                 value={destAccountId}
                 onChange={(e) => setDestAccountId(e.target.value)}
                 required
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-sky-500"
               >
                 <option value="">-- Chọn ví nhận --</option>
                 {accounts
@@ -237,7 +263,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-slate-300">Danh mục</label>
                 {autoMatchedName && (
-                  <span className="text-[10px] text-emerald-400 font-semibold flex items-center space-x-1">
+                  <span className="text-[10px] text-sky-400 font-semibold flex items-center space-x-1">
                     <Sparkles className="w-3 h-3" />
                     <span>Tự động nhận diện: {autoMatchedName}</span>
                   </span>
@@ -249,8 +275,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   setCategoryId(e.target.value);
                   setAutoMatchedName('');
                 }}
-                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-sky-500"
               >
+                <option value="">-- Chọn danh mục --</option>
                 {filteredCategories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name} ({cat.group_type === 'needs' ? 'Thiết yếu' : cat.group_type === 'wants' ? 'Sở thích' : 'Khác'})
@@ -262,13 +289,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
           {/* Note */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Ghi chú (Tùy chọn)</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Ghi chú</label>
             <input
               type="text"
               value={note}
               onChange={(e) => handleNoteChange(e.target.value)}
               placeholder="Ăn trưa, cafe Highland, xăng xe..."
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
             />
           </div>
 
@@ -284,10 +311,10 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition active:scale-95 disabled:opacity-50"
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-lg shadow-sky-600/30 transition active:scale-95 disabled:opacity-50"
             >
               <Check className="w-4 h-4" />
-              <span>{submitting ? 'Đang lưu...' : 'Lưu Giao Dịch'}</span>
+              <span>{submitting ? 'Đang lưu...' : 'Lưu Thay Đổi'}</span>
             </button>
           </div>
         </form>

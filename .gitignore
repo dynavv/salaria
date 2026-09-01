@@ -1,15 +1,34 @@
-# Node dependencies & builds
-node_modules
-frontend/node_modules
-frontend/dist
+# Dependencies & Builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+build/
+*.tsbuildinfo
 
 # 🔒 PRIVATE USER DATA & SECRETS (NEVER COMMIT)
 data/*.db
 data/*.db-shm
 data/*.db-wal
 google_sheet_export/*.csv
+*.csv
+
+# Environment & Private Configs
 .env
 .env.*
+!.env.example
+.clasp.json
+!.clasp.json.example
+
+# Logs & Runtime Process IDs
 *.log
+npm-debug.log*
+yarn-debug.log*
 .server.pid
+
+# OS & Editor Metadata
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.gemini/

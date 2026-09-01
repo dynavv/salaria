@@ -72,6 +72,51 @@ function normalizeText(text: string): string {
  * - 2tr5, 2củ5, 1m2
  * - -50k, +15tr
  */
+export function isSystemOrNoiseMessage(text: string): boolean {
+  const norm = text.toLowerCase();
+  const noiseKeywords = [
+    'preparing your receipt',
+    'adding the location',
+    'your receipt is ready',
+    'dang nhap thanh cong',
+    'đăng nhập thành công',
+    'ma xac thuc',
+    'mã xác thực',
+    'ma otp',
+    'mã otp',
+    'dac quyen',
+    'đặc quyền',
+    'han muc len den',
+    'hạn mức lên đến',
+    'chung minh thu nhap',
+    'chứng minh thu nhập',
+    'dang ky vay',
+    'đăng ký vay',
+    'khoan vay',
+    'khoản vay',
+    'vay tieu dung',
+    'vay tiêu dùng',
+    'mo the tin dung',
+    'mở thẻ tín dụng',
+    'uu dai danh rieng',
+    'ưu đãi dành riêng',
+    'qua tang',
+    'quà tặng',
+    'trung thuong',
+    'trúng thưởng'
+  ];
+
+  return noiseKeywords.some(keyword => norm.includes(keyword));
+}
+
+/**
+ * Parses Vietnamese money strings like:
+ * - 50k, 50 K, 50.000, 50,000, 50000, 50000đ, 50000 vnd
+ * - ₫32,649, đ32.649, -32,649 VND, KFM_HCM_TDU - 05 DUONG ₫32,649 with MSB mDigi
+ * - 1.5tr, 1,5tr, 1.5 triệu, 1.5 củ, 1.5m
+ * - 2tr5, 2củ5, 1m2
+ * - -50k, +15tr
+ */
 export function extractMoneyAndNote(rawLine: string): {
   amount: number;
   type: 'expense' | 'income' | 'transfer';
@@ -79,7 +124,10 @@ export function extractMoneyAndNote(rawLine: string): {
   confidence: number;
 } | null {
   const line = rawLine.trim();
-  if (!line) return null;
+  if (!line || isSystemOrNoiseMessage(line)) return null;
+
+  // Clean balance/limit info to avoid confusing balance with transaction amount
+  const cleanAmtLine = line.replace(/(?:Số dư khả dụng|So du kha dung|Số dư|So du|Hạn mức khả dụng|Han muc kha dung|HM khả dụng|HM kha dung|\bHM\b|Hạn mức|Han muc|\bSD\b)\s*[:\s]*[+-]?\s*[\d.,]+\s*(?:VND|vnd|đ|d|₫|\$|USD)?.*?(?=(?:\bND\b|Nội dung|Noi dung|GD:|tại|tai)|$)/gis, ' ');
 
   // Check explicit prefix
   let explicitType: 'expense' | 'income' | 'transfer' | null = null;
@@ -91,84 +139,131 @@ export function extractMoneyAndNote(rawLine: string): {
     explicitType = 'transfer';
   }
 
-  // Regex patterns for Vietnamese amount expressions:
-  // 1. "2tr5", "2củ5", "1m2", "3trieu5"
-  const splitMillionPattern = /(?:^|\s)([-+]?\s*\d+)\s*(?:tr|triệu|trieu|củ|cu|m)\s*(\d+)(?:\s|$|[^\w\d])/i;
-  
-  // 2. Standard million: "1.5tr", "1,5 triệu", "10tr", "10 củ"
-  const standardMillionPattern = /(?:^|\s)([-+]?\s*\d+(?:[.,]\d+)?)\s*(?:tr|triệu|trieu|củ|cu|m|million)(?:\s|$|[^\w\d])/i;
-
-  // 3. Thousands: "50k", "150 k", "500k", "50 nghìn", "50 ngàn", "50k5"
-  const thousandPattern = /(?:^|\s)([-+]?\s*\d+(?:[.,]\d+)?)\s*(?:k|nghìn|nghin|ngàn|ngan)(?:\s|$|[^\w\d])/i;
-
-  // 4. Exact standard number: "50.000", "150,000", "50000đ", "100000 vnd", "100000" (at least 3-4 digits unless currency symbol attached)
-  const exactCurrencyPattern = /(?:^|\s)([-+]?\s*\d{1,3}(?:[.,]\d{3})+(?:\s*(?:đ|d|vnd|vnđ))?)(?:\s|$|[^\w\d])/i;
-  const rawNumberPattern = /(?:^|\s)([-+]?\s*\d{4,9})(?:\s*(?:đ|d|vnd|vnđ))?(?:\s|$|[^\w\d])/i;
-
   let amount = 0;
   let matchedStr = '';
   let confidence = 0.8;
 
-  // Test Pattern 1: 2tr5
-  let match = line.match(splitMillionPattern);
+  // 1. Explicit keyword prefix: "Số tiền: -32,000 VND", "GD: +500,000"
+  const explicitKwPattern = /(?:Số tiền|So tien|GD|Giao dịch|Giao dich)\s*[:\s]*([+-]?\s*[đ₫$]?\s*[\d.,]+(?:\s*(?:VND|vnd|đ|₫|\$|USD|\bđ\b))?)/i;
+  let match = cleanAmtLine.match(explicitKwPattern);
   if (match) {
-    const whole = parseFloat(match[1].replace(/\s+/g, ''));
-    const frac = parseFloat(match[2]);
-    const fracMultiplier = frac >= 10 ? Math.pow(10, 6 - frac.toString().length) : 100000;
-    amount = Math.abs(whole) * 1000000 + frac * fracMultiplier;
-    matchedStr = match[0];
-    confidence = 0.95;
+    const rawAmt = match[1];
+    if (rawAmt.includes('-')) explicitType = 'expense';
+    else if (rawAmt.includes('+')) explicitType = 'income';
+    const digits = rawAmt.replace(/[^\d]/g, '');
+    if (digits) {
+      amount = parseInt(digits, 10);
+      matchedStr = match[0];
+      confidence = 0.98;
+    }
   }
 
-  // Test Pattern 2: 1.5tr
+  // 2. Currency symbol prefix: "₫32,649", "đ32.649", "$50.00", "+₫50,000"
   if (!amount) {
+    const prefixCurrencyPattern = /(?:^|[\s|:(-])([+-]?\s*[đ₫$]\s*[\d.,]+)/i;
+    match = cleanAmtLine.match(prefixCurrencyPattern);
+    if (match) {
+      const rawAmt = match[1];
+      if (rawAmt.includes('-')) explicitType = 'expense';
+      else if (rawAmt.includes('+')) explicitType = 'income';
+      const digits = rawAmt.replace(/[^\d]/g, '');
+      if (digits && parseInt(digits, 10) >= 1000) {
+        amount = parseInt(digits, 10);
+        matchedStr = match[0];
+        confidence = 0.95;
+      }
+    }
+  }
+
+  // 3. Currency symbol suffix: "32,649 VND", "32.649đ", "50000 VNĐ" (strict check to avoid words like DUONG)
+  if (!amount) {
+    const suffixCurrencyPattern = /(?:^|[\s|:(-])([+-]?\s*\d{1,3}(?:[.,]\d{3})+|\d+)\s*(?:VND|vnd|VNĐ|vnđ|đ|₫|\$|USD|\bđ\b)(?!\w)/i;
+    match = cleanAmtLine.match(suffixCurrencyPattern);
+    if (match) {
+      const rawFull = match[0];
+      const rawNum = match[1];
+      if (rawFull.includes('-')) explicitType = 'expense';
+      else if (rawFull.includes('+')) explicitType = 'income';
+      const digits = rawNum.replace(/[^\d]/g, '');
+      if (digits && parseInt(digits, 10) >= 1000) {
+        amount = parseInt(digits, 10);
+        matchedStr = match[0];
+        confidence = 0.95;
+      }
+    }
+  }
+
+  // 4. Split million: "2tr5", "2củ5", "1m2", "3trieu5", "+2tr5", "-2tr5"
+  if (!amount) {
+    const splitMillionPattern = /(?:^|\s)([-+]?\s*\d+)\s*(?:tr|triệu|trieu|củ|cu|m)\s*(\d+)(?:\s|$|[^\w\d])/i;
+    match = line.match(splitMillionPattern);
+    if (match) {
+      const whole = parseFloat(match[1].replace(/\s+/g, ''));
+      const frac = parseFloat(match[2]);
+      const fracMultiplier = frac >= 10 ? Math.pow(10, 6 - frac.toString().length) : 100000;
+      amount = Math.abs(whole) * 1000000 + frac * fracMultiplier;
+      matchedStr = match[0];
+      if (!explicitType) explicitType = match[0].includes('+') ? 'income' : match[0].includes('-') ? 'expense' : null;
+      confidence = 0.95;
+    }
+  }
+
+  // 5. Standard million: "1.5tr", "1,5 triệu", "10tr", "10 củ", "+1.5tr", "-10tr"
+  if (!amount) {
+    const standardMillionPattern = /(?:^|\s)([-+]?\s*\d+(?:[.,]\d+)?)\s*(?:tr|triệu|trieu|củ|cu|m|million)(?:\s|$|[^\w\d])/i;
     match = line.match(standardMillionPattern);
     if (match) {
       const val = parseFloat(match[1].replace(/\s+/g, '').replace(',', '.'));
       amount = Math.abs(val) * 1000000;
       matchedStr = match[0];
+      if (!explicitType) explicitType = match[0].includes('+') ? 'income' : match[0].includes('-') ? 'expense' : null;
       confidence = 0.95;
     }
   }
 
-  // Test Pattern 3: 50k
+  // 6. Thousands: "50k", "150 k", "500k", "50 nghìn", "50 ngàn", "+50k", "-50k"
   if (!amount) {
+    const thousandPattern = /(?:^|\s)([-+]?\s*\d+(?:[.,]\d+)?)\s*(?:k|nghìn|nghin|ngàn|ngan)(?:\s|$|[^\w\d])/i;
     match = line.match(thousandPattern);
     if (match) {
       const val = parseFloat(match[1].replace(/\s+/g, '').replace(',', '.'));
       amount = Math.abs(val) * 1000;
       matchedStr = match[0];
+      if (!explicitType) explicitType = match[0].includes('+') ? 'income' : match[0].includes('-') ? 'expense' : null;
       confidence = 0.95;
     }
   }
 
-  // Test Pattern 4: 50.000đ or 50.000
+  // 7. Exact standard number: "50.000", "150,000", "+50.000", "-50.000"
   if (!amount) {
-    match = line.match(exactCurrencyPattern);
+    const exactCurrencyPattern = /(?:^|\s)([-+]?\s*\d{1,3}(?:[.,]\d{3})+)(?:\s|$|[^\w\d])/i;
+    match = cleanAmtLine.match(exactCurrencyPattern);
     if (match) {
       const cleanNum = match[1].replace(/[^\d]/g, '');
       amount = parseInt(cleanNum, 10);
       matchedStr = match[0];
+      if (!explicitType) explicitType = match[0].includes('+') ? 'income' : match[0].includes('-') ? 'expense' : null;
       confidence = 0.9;
     }
   }
 
-  // Test Pattern 5: Plain number 50000
+  // 8. Plain number 50000, +50000, -50000
   if (!amount) {
-    match = line.match(rawNumberPattern);
+    const rawNumberPattern = /(?:^|\s)([-+]?\s*\d{4,9})(?:\s|$|[^\w\d])/i;
+    match = cleanAmtLine.match(rawNumberPattern);
     if (match) {
       const cleanNum = match[1].replace(/[^\d]/g, '');
       const parsedVal = parseInt(cleanNum, 10);
-      // Avoid phone numbers, years (e.g. 2026), or pin codes if context doesn't look like money
-      if (parsedVal !== 2024 && parsedVal !== 2025 && parsedVal !== 2026 && parsedVal >= 1000) {
+      if (parsedVal !== 2024 && parsedVal !== 2025 && parsedVal !== 2026 && parsedVal !== 2027 && parsedVal >= 1000) {
         amount = parsedVal;
         matchedStr = match[0];
+        if (!explicitType) explicitType = match[0].includes('+') ? 'income' : match[0].includes('-') ? 'expense' : null;
         confidence = 0.75;
       }
     }
   }
 
-  // Test Pattern 6: Shorthand 2-3 digit number without unit (e.g. "cafe 35" -> 35.000₫, "45 cơm tấm" -> 45.000₫, "ăn tối 120" -> 120.000₫)
+  // 9. Shorthand 2-3 digit number without unit (e.g. "cafe 35" -> 35.000₫, "+35 cafe", "-35 cafe")
   if (!amount) {
     const shorthandPattern = /(?:^|\s)([-+]?\s*\d{2,3})(?:\s|$|[^\w\d])/i;
     match = line.match(shorthandPattern);
@@ -178,6 +273,7 @@ export function extractMoneyAndNote(rawLine: string): {
       if (parsedVal >= 10 && parsedVal <= 999) {
         amount = parsedVal * 1000;
         matchedStr = match[0];
+        if (!explicitType) explicitType = match[0].includes('+') ? 'income' : match[0].includes('-') ? 'expense' : null;
         confidence = 0.7;
       }
     }
@@ -187,29 +283,65 @@ export function extractMoneyAndNote(rawLine: string): {
     return null;
   }
 
-  // Extract clean note by removing matched money substring and leading +, -, colons
-  let cleanNote = line
-    .replace(matchedStr.trim(), '')
-    .replace(/^[+\-:\s]+/, '')
-    .replace(/[+\-:\s]+$/, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // Extract clean note
+  let cleanNote = '';
 
-  // If note is empty, provide placeholder from matched text or raw line
+  // Case A: Google Wallet format "KFM_HCM_TDU - 05 DUONG ₫32,649 with MSB mDigi ••3420"
+  const gwMatch = line.match(/^(?:Google Wallet\s*[:\s]*)?(.*?)(?:\s*[-–|:]\s*)?[đ₫$]?\s*[\d.,]+(?:\s*(?:VND|vnd|đ|₫|\$|USD))?\s+with\s+/i);
+  if (gwMatch && gwMatch[1].replace(/[-–|:\s]/g, '').length > 1) {
+    cleanNote = gwMatch[1].replace(/^[-–|:\s]+|[-–|:\s]+$/g, '').trim();
+  }
+
+  // Case B: Bank transaction ND / Nội dung
   if (!cleanNote) {
-    cleanNote = 'Chi tiêu';
+    const ndMatch = line.match(/(?:^|\n|[\s|])\s*(?:Nội dung|Noi dung|\bND\b)\s*[:\s]+([^|\n\r]+)/i);
+    if (ndMatch) {
+      cleanNote = ndMatch[1].trim();
+    }
+  }
+
+  // Case C: Merchant location after "tại" / "tai" / "cho"
+  if (!cleanNote) {
+    const taiMatch = line.match(/(?:tại|tai|cho)\s+([^.|\n\r]+)/i);
+    if (taiMatch) {
+      cleanNote = taiMatch[1].trim();
+    }
+  }
+
+  // Case D: General text note extraction by stripping amount string and common noise
+  if (!cleanNote) {
+    let stripped = line;
+    if (matchedStr) {
+      stripped = stripped.replace(matchedStr.trim(), '');
+    }
+    // Remove balance/account noise
+    stripped = stripped
+      .replace(/(?:Số dư|So du|Hạn mức khả dụng|Han muc kha dung|HM khả dụng|HM kha dung|\bHM\b|Hạn mức|Han muc|\bSD\b)\s*[:\s]*[+-]?\s*[\d.,]+\s*(?:VND|vnd|đ|d|₫|\$|USD)?/gi, '')
+      .replace(/(?:Số thẻ|So the|Tài khoản|Tai khoan|TK)\s*[:\s]*[\w*]+/gi, '')
+      .replace(/^[+\-:\s]+/, '')
+      .replace(/[+\-:\s]+$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    cleanNote = stripped;
+  }
+
+  if (!cleanNote) {
+    cleanNote = explicitType === 'income' ? 'Nhận tiền' : 'Chi tiêu';
   }
 
   // Determine type if not explicitly marked
   let finalType: 'expense' | 'income' | 'transfer' = explicitType || 'expense';
   if (!explicitType) {
     const norm = normalizeText(line);
-    // Ignore "lương khô" / "luong kho" from salary income
     if (norm.includes('luong kho') || norm.includes('lương khô')) {
       finalType = 'expense';
     } else {
-      const incomeKeywords = ['luong cty', 'lương cty', 'nhan luong', 'nhận lương', 'ck luong', 'ck lương', 'salary', 'thuong', 'thưởng', 'bonus', 'nhan tien', 'nhận tiền', 'hoan tien', 'hoàn tiền', 'lai', 'lãi', 'cashback', 'ck den', 'ck đến'];
-      // If starts with + or contains clear salary receipt
+      const incomeKeywords = [
+        'luong cty', 'lương cty', 'nhan luong', 'nhận lương', 'ck luong', 'ck lương', 'salary',
+        'thuong', 'thưởng', 'bonus', 'nhan tien', 'nhận tiền', 'hoan tien', 'hoàn tiền',
+        'lai', 'lãi', 'cashback', 'ck den', 'ck đến', 'chuyen den', 'chuyển đến', 'tien vao', 'tiền vào', 'cong tien', 'cộng tiền'
+      ];
       if (incomeKeywords.some(kw => norm.includes(kw))) {
         finalType = 'income';
       }

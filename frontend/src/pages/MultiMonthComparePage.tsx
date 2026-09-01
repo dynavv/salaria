@@ -15,9 +15,10 @@ import {
   TrendingDown, 
   ArrowRight, 
   Sparkles, 
-  CheckCircle2, 
   Calendar,
-  Layers
+  Layers,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
 import { MultiMonthComparison } from '../types';
 import { api } from '../api/client';
@@ -71,6 +72,12 @@ export const MultiMonthComparePage: React.FC<MultiMonthComparePageProps> = ({ av
     }
   };
 
+  // Format Month title (e.g. 2026-08 -> T08/26)
+  const formatMonthShort = (mStr: string) => {
+    const [y, m] = mStr.split('-');
+    return `T${m}/${y.slice(-2)}`;
+  };
+
   // Prepare chart data: each category with amount per month
   const chartData = (data?.categoryComparison || []).slice(0, 8).map((cat) => {
     const item: any = { name: cat.categoryName };
@@ -80,126 +87,173 @@ export const MultiMonthComparePage: React.FC<MultiMonthComparePageProps> = ({ av
     return item;
   });
 
-  const monthColors = ['#38bdf8', '#10b981', '#f59e0b', '#ec4899'];
+  const monthColors = ['#10b981', '#38bdf8', '#f59e0b', '#ec4899'];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 pb-16">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 shadow-xl">
+    <div className="space-y-6 animate-in fade-in duration-200 pb-20">
+      
+      {/* 🌟 Header Banner */}
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-800/80 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-5">
         <div className="space-y-1">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+            <div className="p-2 rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
               <GitCompare className="w-5 h-5" />
             </div>
-            <h2 className="text-xl font-extrabold text-slate-100">So sánh Biến động Chi tiêu giữa các Tháng</h2>
+            <h2 className="text-xl font-black text-slate-100">So Sánh Biến Động Giữa Các Tháng</h2>
           </div>
           <p className="text-xs text-slate-400">
-            Theo dõi xu hướng tăng giảm chi tiêu theo từng danh mục và đánh giá mức độ tiết kiệm theo thời gian.
+            Theo dõi xu hướng dòng tiền tăng/giảm qua các tháng và đánh giá hiệu quả tiết kiệm dài hạn.
           </p>
         </div>
 
-        {/* Month selector chips */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Chọn tháng so sánh:</span>
+        {/* Month Picker Chips */}
+        <div className="flex items-center flex-wrap gap-2">
           {availableMonths.map((m) => {
             const isSelected = selectedMonths.includes(m);
             return (
               <button
                 key={m}
                 onClick={() => handleToggleMonth(m)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                className={`px-3 py-1.5 rounded-2xl text-xs font-bold transition-all shadow-sm ${
                   isSelected
-                    ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 border border-slate-700'
+                    ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                    : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700/50'
                 }`}
               >
-                Tháng {m.split('-')[1]}/{m.split('-')[0]}
+                {m}
               </button>
             );
           })}
         </div>
       </div>
 
-      {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400">Đang tổng hợp dữ liệu so sánh các tháng...</div>
-      ) : !data || data.months.length === 0 ? (
-        <div className="p-12 text-center text-xs text-slate-400 bg-slate-900/60 rounded-2xl border border-slate-800">
-          Chưa có đủ dữ liệu giao dịch ở các tháng để so sánh. Hãy thêm hoặc import giao dịch từ Telegram!
+      {loading && !data ? (
+        <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-3">
+          <div className="w-8 h-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+          <span className="text-xs text-slate-400">Đang đối chiếu dữ liệu giữa các tháng...</span>
         </div>
-      ) : (
+      ) : !data ? null : (
         <>
-          {/* Overview Metric Cards across selected months */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {data.months.map((mStats, idx) => (
-              <div
-                key={mStats.month}
-                className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 relative overflow-hidden shadow-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 text-sky-400 border border-slate-700">
-                    Tháng {mStats.month.split('-')[1]}/{mStats.month.split('-')[0]}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    {mStats.transactionCount} giao dịch
-                  </span>
+          {/* 📊 Month-over-Month Highlight Cards */}
+          {data.overallMoM && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              
+              {/* Expense Diff */}
+              <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl">
+                <span className="text-xs font-bold text-slate-400">Biến động Chi tiêu MoM</span>
+                <div className="flex items-center space-x-2 mt-2">
+                  {data.overallMoM.expenseDiff <= 0 ? (
+                    <div className="p-1.5 rounded-xl bg-emerald-500/15 text-emerald-400">
+                      <ArrowDownRight className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <div className="p-1.5 rounded-xl bg-rose-500/15 text-rose-400">
+                      <ArrowUpRight className="w-4 h-4" />
+                    </div>
+                  )}
+                  <p className={`text-xl font-black ${data.overallMoM.expenseDiff <= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {data.overallMoM.expenseDiff > 0 ? '+' : ''}{data.overallMoM.expenseDiff.toLocaleString('vi-VN')} ₫
+                  </p>
                 </div>
-
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-slate-400">Tổng Chi:</span>
-                    <span className="text-base font-extrabold text-rose-400">
-                      {mStats.totalExpense.toLocaleString('vi-VN')} ₫
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-slate-400">Tổng Thu:</span>
-                    <span className="text-base font-extrabold text-emerald-400">
-                      {mStats.totalIncome.toLocaleString('vi-VN')} ₫
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-baseline pt-2 border-t border-slate-800">
-                    <span className="text-xs text-slate-400">Tiết kiệm ròng:</span>
-                    <span className={`text-sm font-bold ${mStats.netSavings >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {mStats.netSavings.toLocaleString('vi-VN')} ₫ ({mStats.savingsRate}%)
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-baseline text-[11px] text-slate-500">
-                    <span>Trung bình ngày:</span>
-                    <span>{mStats.dailyAverageExpense.toLocaleString('vi-VN')} ₫/ngày</span>
-                  </div>
-                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {data.overallMoM.expenseDiff <= 0 ? 'Giảm chi tiêu so với tháng trước' : 'Tăng chi tiêu so với tháng trước'}
+                </p>
               </div>
-            ))}
-          </div>
 
-          {/* Side-by-Side Category Chart */}
-          <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl">
-            <h3 className="text-sm font-bold text-slate-200 mb-4 flex items-center space-x-2">
-              <Layers className="w-4 h-4 text-emerald-400" />
-              <span>Biểu đồ So sánh Chi tiêu theo Danh mục qua các Tháng</span>
-            </h3>
+              {/* Income Diff */}
+              <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl">
+                <span className="text-xs font-bold text-slate-400">Biến động Thu nhập MoM</span>
+                <div className="flex items-center space-x-2 mt-2">
+                  {data.overallMoM.incomeDiff >= 0 ? (
+                    <div className="p-1.5 rounded-xl bg-emerald-500/15 text-emerald-400">
+                      <ArrowUpRight className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-400">
+                      <ArrowDownRight className="w-4 h-4" />
+                    </div>
+                  )}
+                  <p className={`text-xl font-black ${data.overallMoM.incomeDiff >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {data.overallMoM.incomeDiff > 0 ? '+' : ''}{data.overallMoM.incomeDiff.toLocaleString('vi-VN')} ₫
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {data.overallMoM.incomeDiff >= 0 ? 'Thu nhập tăng trưởng' : 'Thu nhập giảm so với tháng trước'}
+                </p>
+              </div>
 
-            <div className="h-80 w-full">
+              {/* Savings Diff */}
+              <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl">
+                <span className="text-xs font-bold text-slate-400">Mức thay đổi Tiết kiệm</span>
+                <div className="flex items-center space-x-2 mt-2">
+                  <div className="p-1.5 rounded-xl bg-sky-500/15 text-sky-400">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <p className={`text-xl font-black ${data.overallMoM.savingsDiff >= 0 ? 'text-sky-400' : 'text-rose-400'}`}>
+                    {data.overallMoM.savingsDiff > 0 ? '+' : ''}{data.overallMoM.savingsDiff.toLocaleString('vi-VN')} ₫
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Chênh lệch dòng tiền thặng dư
+                </p>
+              </div>
+
+            </div>
+          )}
+
+          {/* 📈 Grouped Comparison Chart */}
+          <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-slate-200">Đối Chiếu Chi Tiêu Theo Từng Danh Mục</h3>
+              <div className="flex items-center space-x-3 text-xs">
+                {selectedMonths.map((m, idx) => (
+                  <div key={m} className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: monthColors[idx % monthColors.length] }}></span>
+                    <span className="font-semibold text-slate-300">{m}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-72 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="#64748b" tick={{ fontSize: 11 }} tickFormatter={(val) => `${(val / 1000).toLocaleString()}k`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px' }}
-                    formatter={(val: any) => [`${Number(val).toLocaleString('vi-VN')} ₫`]}
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis 
+                    stroke="#64748b" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickFormatter={(val) => val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : `${(val / 1000).toFixed(0)}k`} 
                   />
-                  <Legend />
+                  <Tooltip 
+                    cursor={{ fill: 'rgba(51, 65, 85, 0.2)', radius: 8 }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-slate-900 border border-slate-700 p-3 rounded-2xl shadow-2xl text-xs space-y-1.5">
+                            <p className="font-bold text-slate-200">{label}</p>
+                            {payload.map((p: any, i) => (
+                              <div key={i} className="flex items-center justify-between space-x-3">
+                                <span className="text-slate-400">{p.dataKey}:</span>
+                                <span className="font-bold" style={{ color: p.fill }}>
+                                  {Number(p.value).toLocaleString('vi-VN')} ₫
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                   {selectedMonths.map((m, idx) => (
-                    <Bar
-                      key={m}
-                      dataKey={m}
-                      name={`Tháng ${m.split('-')[1]}/${m.split('-')[0]}`}
-                      fill={monthColors[idx % monthColors.length]}
-                      radius={[4, 4, 0, 0]}
+                    <Bar 
+                      key={m} 
+                      dataKey={m} 
+                      fill={monthColors[idx % monthColors.length]} 
+                      radius={[6, 6, 0, 0]} 
                     />
                   ))}
                 </BarChart>
@@ -207,71 +261,51 @@ export const MultiMonthComparePage: React.FC<MultiMonthComparePageProps> = ({ av
             </div>
           </div>
 
-          {/* Detailed Category Variance Table */}
-          <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-slate-200">Chi tiết Biến động theo từng Danh mục</h3>
-
+          {/* 📋 Comparison Detail Table */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-slate-800">
+              <h4 className="text-xs font-bold text-slate-300">Bảng Chi Tiết Tăng / Giảm Theo Danh Mục</h4>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-800/80 text-slate-400 font-semibold border-b border-slate-700/60">
+                <thead className="bg-slate-800/60 text-slate-400 font-bold border-b border-slate-800">
                   <tr>
-                    <th className="py-3 px-4">Danh mục</th>
-                    <th className="py-3 px-3">Nhóm (50/30/20)</th>
+                    <th className="py-3.5 px-4">Danh mục</th>
                     {selectedMonths.map((m) => (
-                      <th key={m} className="py-3 px-3 text-right">
-                        Tháng {m.split('-')[1]}
-                      </th>
+                      <th key={m} className="py-3.5 px-4 text-right">{m}</th>
                     ))}
-                    <th className="py-3 px-4 text-right">Biến động (MoM)</th>
+                    <th className="py-3.5 px-4 text-right">Chênh lệch</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {data.categoryComparison.map((cat) => (
-                    <tr key={cat.categoryId} className="hover:bg-slate-800/30 transition">
-                      <td className="py-3 px-4 flex items-center space-x-2.5">
-                        <div
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white"
-                          style={{ backgroundColor: cat.categoryColor }}
-                        >
-                          <IconRenderer name={cat.categoryIcon} className="w-3.5 h-3.5" />
+                    <tr key={cat.categoryId} className="hover:bg-slate-800/40 transition">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center space-x-2.5">
+                          <div
+                            className="w-7 h-7 rounded-xl flex items-center justify-center text-white shrink-0"
+                            style={{ backgroundColor: cat.categoryColor || '#64748b' }}
+                          >
+                            <IconRenderer name={cat.categoryIcon || 'Tag'} className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="font-bold text-slate-200">{cat.categoryName}</span>
                         </div>
-                        <span className="font-semibold text-slate-200">{cat.categoryName}</span>
-                      </td>
-
-                      <td className="py-3 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            cat.groupType === 'needs'
-                              ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                              : 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                          }`}
-                        >
-                          {cat.groupType === 'needs' ? 'Thiết yếu' : 'Sở thích'}
-                        </span>
                       </td>
 
                       {selectedMonths.map((m) => (
-                        <td key={m} className="py-3 px-3 text-right font-medium text-slate-300">
+                        <td key={m} className="py-3.5 px-4 text-right font-medium text-slate-300">
                           {(cat.monthlyAmounts[m] || 0).toLocaleString('vi-VN')} ₫
                         </td>
                       ))}
 
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-1.5">
-                          {cat.diffAmount > 0 ? (
-                            <span className="flex items-center text-rose-400 font-bold">
-                              <TrendingUp className="w-3.5 h-3.5 mr-0.5" />
-                              +{cat.diffAmount.toLocaleString('vi-VN')} ₫ (+{cat.diffPercentage}%)
-                            </span>
-                          ) : cat.diffAmount < 0 ? (
-                            <span className="flex items-center text-emerald-400 font-bold">
-                              <TrendingDown className="w-3.5 h-3.5 mr-0.5" />
-                              {cat.diffAmount.toLocaleString('vi-VN')} ₫ ({cat.diffPercentage}%)
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 font-medium">Không đổi</span>
-                          )}
-                        </div>
+                      <td className="py-3.5 px-4 text-right">
+                        <span
+                          className={`font-black ${
+                            cat.diffAmount < 0 ? 'text-emerald-400' : cat.diffAmount > 0 ? 'text-rose-400' : 'text-slate-400'
+                          }`}
+                        >
+                          {cat.diffAmount > 0 ? '+' : ''}{cat.diffAmount.toLocaleString('vi-VN')} ₫
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -281,6 +315,7 @@ export const MultiMonthComparePage: React.FC<MultiMonthComparePageProps> = ({ av
           </div>
         </>
       )}
+
     </div>
   );
 };

@@ -2,6 +2,7 @@
   "name": "personal-finance-app",
   "version": "1.0.0",
   "description": "Personal Finance Management App with Telegram HTML Import & Multi-Month Analytics",
+  "license": "GPL-3.0-or-later",
   "main": "backend/src/index.ts",
   "scripts": {
     "server": "tsx watch backend/src/index.ts",

@@ -2,16 +2,59 @@ import { GoogleGenAI } from '@google/genai';
 import { getMonthlyStats, generateFinancialAdvice, getMultiMonthComparison } from './financialAdvisor';
 import { db } from '../db';
 
+// --- 🛡️ PRODUCTION ANTI-ABUSE & RATE-LIMITING PROTECTION LAYER ---
+
+interface CacheEntry {
+  answer: string;
+  modelUsed: string;
+  timestamp: number;
+}
+
+// 1. In-memory response cache to eliminate redundant API calls (TTL: 1 hour)
+const responseCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+// 2. Sliding window rate limiter (Max 10 requests / minute, Min 2.5s interval)
+const requestTimestamps: number[] = [];
+const MAX_RPM = 10;
+const MIN_INTERVAL_MS = 2500;
+let lastRequestTime = 0;
+
+// 3. Cooldown timestamp on 429 or quota exceeded
+let apiCooldownUntil = 0;
+
+function cleanOldCache() {
+  const now = Date.now();
+  for (const [key, entry] of responseCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL_MS) {
+      responseCache.delete(key);
+    }
+  }
+}
+
 export async function askGeminiAdvisor(
   question: string,
   month: string,
   userApiKey?: string
 ): Promise<{ answer: string; modelUsed: string }> {
-  // 1. Gather rich context from local SQLite database for this month
+  const trimmedQ = (question || '').trim();
+  const normalizedQ = trimmedQ.toLowerCase();
+  const cacheKey = `${month}:${normalizedQ}`;
+  const now = Date.now();
+
+  // 🛡️ STEP 1: Check In-Memory Cache first (0 API quota used, instant response)
+  const cached = responseCache.get(cacheKey);
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return {
+      answer: cached.answer,
+      modelUsed: `${cached.modelUsed} (Cached)`
+    };
+  }
+
+  // Gather rich context from local SQLite database for this month
   const monthlyStats = getMonthlyStats(month);
   const adviceData = generateFinancialAdvice(month);
 
-  // Available months for comparison
   const availableMonths = db.prepare(`
     SELECT DISTINCT strftime('%Y-%m', date) as month 
     FROM transactions 
@@ -19,11 +62,7 @@ export async function askGeminiAdvisor(
     LIMIT 3
   `).all() as Array<{ month: string }>;
 
-  const comparison = availableMonths.length >= 2 
-    ? getMultiMonthComparison(availableMonths.map(m => m.month).reverse())
-    : null;
-
-  // Build structured summary prompt context
+  // Build concise, structured summary prompt context
   const contextSummary = `
 DỮ LIỆU TÀI CHÍNH CÁ NHÂN THÁNG ${monthlyStats.month}:
 - Tổng Thu nhập: ${monthlyStats.totalIncome.toLocaleString('vi-VN')} ₫
@@ -49,31 +88,83 @@ ${adviceData.peakSpendingDay ? `- Ngày chi nhiều nhất: ${adviceData.peakSpe
 
   const apiKey = userApiKey || process.env.GEMINI_API_KEY;
 
-  if (apiKey) {
-    try {
-      const client = new GoogleGenAI({ apiKey });
-      const systemInstruction = `Bạn là Cố Vấn Tài Chính Cá Nhân AI (AI Financial Advisor) chuyên nghiệp, thực tế và thấu hiểu văn hóa tiêu dùng của người Việt Nam. 
-Hãy đọc kỹ báo cáo số liệu tài chính được cung cấp bên dưới và trả lời câu hỏi của người dùng một cách sắc bén, trung thực, kèm các bước hành động cụ thể để tiết kiệm tiền hoặc tối ưu ngân sách. Trả lời bằng tiếng Việt, định dạng Markdown gọn gàng, có icon trực quan.`;
+  // 🛡️ STEP 2: Safe API Call with strict rate limiting & cooldown protection
+  let canCallApi = Boolean(apiKey);
 
-      const prompt = `${systemInstruction}\n\n${contextSummary}\n\nCÂU HỎI CỦA NGƯỜI DÙNG: "${question}"`;
+  if (canCallApi) {
+    // Check if in cooldown period (e.g. after a 429)
+    if (now < apiCooldownUntil) {
+      console.warn(`[Anti-Abuse] In API cooldown mode until ${new Date(apiCooldownUntil).toISOString()}. Using offline engine.`);
+      canCallApi = false;
+    }
 
-      const interaction = await client.interactions.create({
-        model: 'gemini-3.6-flash',
-        input: prompt,
-      });
+    // Check sliding window RPM (Max 10 calls per 60 seconds)
+    const windowStart = now - 60000;
+    while (requestTimestamps.length > 0 && requestTimestamps[0] < windowStart) {
+      requestTimestamps.shift();
+    }
+    if (requestTimestamps.length >= MAX_RPM) {
+      console.warn(`[Anti-Abuse] Rate limit threshold reached (${requestTimestamps.length}/${MAX_RPM} RPM). Using offline engine to protect quota.`);
+      canCallApi = false;
+    }
 
-      const responseText = interaction.output_text || 'Không nhận được phản hồi từ AI.';
-      return {
-        answer: responseText,
-        modelUsed: 'gemini-3.6-flash (Google Gemini AI)'
-      };
-    } catch (err: any) {
-      console.error('Gemini API Error, falling back to heuristic engine:', err.message);
+    // Check min interval between requests
+    if (now - lastRequestTime < MIN_INTERVAL_MS) {
+      // Sleep slightly to enforce spacing
+      const waitMs = MIN_INTERVAL_MS - (now - lastRequestTime);
+      await new Promise(res => setTimeout(res, waitMs));
     }
   }
 
-  // Fallback heuristic engine if no API key is set or API failed
-  const qLower = question.toLowerCase();
+  if (canCallApi && apiKey) {
+    try {
+      const client = new GoogleGenAI({ apiKey });
+      const systemInstruction = `Bạn là Cố Vấn Tài Chính Cá Nhân AI (AI Financial Advisor) chuyên nghiệp, thực tế và thấu hiểu văn hóa tiêu dùng của người Việt Nam.
+Hãy đọc kỹ báo cáo số liệu tài chính được cung cấp bên dưới và trả lời câu hỏi của người dùng một cách sắc bén, trung thực, kèm các bước hành động cụ thể để tiết kiệm tiền hoặc tối ưu ngân sách. Trả lời bằng tiếng Việt, định dạng Markdown gọn gàng, có icon trực quan.`;
+
+      const prompt = `${systemInstruction}\n\n${contextSummary}\n\nCÂU HỎI CỦA NGƯỜI DÙNG: "${trimmedQ}"`;
+
+      // Update rate limiter tracking
+      lastRequestTime = Date.now();
+      requestTimestamps.push(lastRequestTime);
+
+      const response = await client.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: prompt,
+        config: {
+          maxOutputTokens: 1200,
+          temperature: 0.7,
+        }
+      });
+
+      const responseText = response.text || 'Không nhận được phản hồi từ AI.';
+      const result = {
+        answer: responseText,
+        modelUsed: 'gemini-3.6-flash (Google Gemini AI)'
+      };
+
+      // Save to cache
+      cleanOldCache();
+      responseCache.set(cacheKey, {
+        answer: result.answer,
+        modelUsed: result.modelUsed,
+        timestamp: Date.now()
+      });
+
+      return result;
+    } catch (err: any) {
+      console.error('[Gemini API] Error encountered:', err.message);
+
+      // If rate limited or quota exceeded, set cooldown to avoid spamming Google servers
+      if (err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED') || err.message?.includes('quota')) {
+        apiCooldownUntil = Date.now() + 60000; // 60s cooldown
+        console.warn('[Anti-Abuse] 429 quota hit. Activating 60-second cooldown protection.');
+      }
+    }
+  }
+
+  // 🛡️ STEP 3: Fallback Offline Heuristic Engine (100% Reliable, 0 API quota)
+  const qLower = normalizedQ;
   let generatedAnswer = '';
 
   if (qLower.includes('tiết kiệm') || qLower.includes('tiet kiem') || qLower.includes('cắt giảm')) {
@@ -98,13 +189,20 @@ Hãy đọc kỹ báo cáo số liệu tài chính được cung cấp bên dư�
     generatedAnswer = `📊 **Đánh giá tổng quan từ Cố Vấn:**
 - Điểm sức khỏe tài chính tháng ${monthlyStats.month.split('-')[1]} của bạn là **${adviceData.healthScore}/100** (Mức **${adviceData.scoreLevel}**).
 - Tỷ lệ phân bổ hiện tại: Thiết yếu **${adviceData.rule503020.needs.actualPercent}%** | Sở thích **${adviceData.rule503020.wants.actualPercent}%** | Tiết kiệm **${adviceData.rule503020.savings.actualPercent}%**.
-- ${adviceData.keyInsights.length > 0 ? adviceData.keyInsights[0].description : 'Dòng tiền của bạn đang duy trì ổn định.'}
-
-*(Mẹo: Bạn có thể cài đặt GEMINI_API_KEY trong file .env hoặc nhập trực tiếp để kích hoạt model AI Gemini 3.6 Flash phân tích chi tiết hơn nữa!)*`;
+- ${adviceData.keyInsights.length > 0 ? adviceData.keyInsights[0].description : 'Dòng tiền của bạn đang duy trì ổn định.'}`;
   }
 
-  return {
+  const fallbackResult = {
     answer: generatedAnswer,
     modelUsed: 'Local Financial Intelligence Engine (Offline Rule-based)'
   };
+
+  // Cache fallback answer too so rapid clicks don't recompute
+  responseCache.set(cacheKey, {
+    answer: fallbackResult.answer,
+    modelUsed: fallbackResult.modelUsed,
+    timestamp: Date.now()
+  });
+
+  return fallbackResult;
 }

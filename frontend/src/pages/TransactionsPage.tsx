@@ -4,6 +4,7 @@ import {
   Search, 
   Filter, 
   Trash2, 
+  Pencil,
   Plus, 
   ArrowUpDown, 
   Calendar,
@@ -18,6 +19,7 @@ import {
 import { Transaction, Account, Category } from '../types';
 import { api } from '../api/client';
 import { IconRenderer } from '../components/IconRenderer';
+import { EditTransactionModal } from '../components/EditTransactionModal';
 
 interface TransactionsPageProps {
   currentMonth: string;
@@ -43,6 +45,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const [filterMonth, setFilterMonth] = useState<string>(currentMonth);
   const [sortBy, setSortBy] = useState<string>('date_desc');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   useEffect(() => {
     setFilterMonth(currentMonth);
@@ -236,7 +239,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
                   <th className="py-3.5 px-3">Ghi chú chi tiết</th>
                   <th className="py-3.5 px-3 w-40">Tài khoản ví</th>
                   <th className="py-3.5 px-4 w-36 text-right">Số tiền</th>
-                  <th className="py-3.5 px-3 w-14 text-center">Xóa</th>
+                  <th className="py-3.5 px-3 w-20 text-center">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -300,16 +303,25 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
                       </span>
                     </td>
 
-                    {/* Delete Action */}
-                    <td className="py-3.5 px-3 text-center">
-                      <button
-                        onClick={() => handleDelete(tx.id)}
-                        disabled={deletingId === tx.id}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition opacity-0 group-hover:opacity-100"
-                        title="Xóa giao dịch"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    {/* Action buttons: Edit & Delete */}
+                    <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center space-x-1">
+                        <button
+                          onClick={() => setEditingTx(tx)}
+                          className="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-xl transition"
+                          title="Chỉnh sửa giao dịch"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(tx.id)}
+                          disabled={deletingId === tx.id}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition"
+                          title="Xóa giao dịch"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
 
                   </tr>
@@ -319,6 +331,19 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           </div>
         )}
       </div>
+
+      {/* ✏️ Edit Transaction Modal */}
+      <EditTransactionModal
+        isOpen={Boolean(editingTx)}
+        transaction={editingTx}
+        accounts={accounts}
+        categories={categories}
+        onClose={() => setEditingTx(null)}
+        onSuccess={() => {
+          setEditingTx(null);
+          loadTransactions();
+        }}
+      />
 
     </div>
   );

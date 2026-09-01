@@ -120,16 +120,25 @@ export async function syncTelegramUpdates(): Promise<{
               date = excluded.date,
               amount = excluded.amount,
               type = excluded.type,
+              category_id = excluded.category_id,
+              account_id = excluded.account_id,
               note = excluded.note
           `);
 
-          // Match categories by name
+          // Match categories and accounts dynamically
           const catMap = new Map<string, string>();
           const allCats = db.prepare('SELECT id, name FROM categories').all() as any[];
           allCats.forEach(c => {
             catMap.set(c.name.toLowerCase(), c.id);
-            // also normalize without accents
             catMap.set(c.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), c.id);
+          });
+
+          const accMap = new Map<string, string>();
+          const allAccs = db.prepare('SELECT id, name, type FROM accounts').all() as any[];
+          allAccs.forEach(a => {
+            accMap.set(a.name.toLowerCase(), a.id);
+            accMap.set(a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), a.id);
+            accMap.set(a.type.toLowerCase(), a.id);
           });
 
           for (const tx of gsTxs) {
@@ -139,6 +148,9 @@ export async function syncTelegramUpdates(): Promise<{
 
             const normCatName = (tx.category_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const catId = catMap.get(normCatName) || catMap.get((tx.category_name || '').toLowerCase()) || null;
+
+            const normAccName = (tx.account_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const accId = accMap.get(normAccName) || accMap.get((tx.account_name || '').toLowerCase()) || (tx.source === 'bank_notification' ? 'acc_bank' : 'acc_cash');
             const exists = db.prepare('SELECT id FROM transactions WHERE id = ?').get(tx.id);
             
             insertStmt.run(
@@ -147,7 +159,7 @@ export async function syncTelegramUpdates(): Promise<{
               tx.amount,
               tx.type,
               catId,
-              'acc_cash',
+              accId,
               tx.note,
               tx.source || 'telegram_bot',
               tx.raw_telegram_text || null
