@@ -2,6 +2,10 @@
 
 > **Hệ sinh thái quản lý tài chính cá nhân tự động hóa toàn diện 2026**: Tự động bắt thông báo biến động số dư ngân hàng (MSB, ZaloPay, Google Wallet, VCB...) ➜ Ghi chép 0.1s qua Telegram Bot & Cloudflare Worker ➜ Đồng bộ hai chiều với Google Sheets ➜ Trực quan hóa trên Web App chuẩn Fintech 2026.
 
+<p align="center">
+  <img src="docs/assets/dashboard_overview.png" alt="Salaria Modern Fintech Dashboard" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+</p>
+
 ---
 
 ## 🌟 Tính Năng Nổi Bật (Key Features)
@@ -21,21 +25,29 @@
 - **Biểu đồ cột tương tác (Interactive Daily Spending)**: Tự động đổi màu theo mức độ chi (Xanh = Dưới TB, Cam = Vượt TB, Đỏ = Đột biến), bấm vào cột để xem chi tiết từng ngày.
 - **Đo lường Quy tắc 50/30/20**: Theo dõi sát sao 3 trụ cột: *50% Thiết yếu (Needs)*, *30% Linh hoạt (Wants)*, *20% Tích lũy (Savings)*.
 
-### 3. 💳 Quản Lý Ví Thông Minh (Digital Smart Cards)
-- Giao diện thẻ chip kỹ thuật số hiện đại cho từng loại ví: Tiền mặt, Tài khoản Ngân hàng, Ví điện tử, Thẻ tín dụng.
-- **Chuyển tiền nội bộ (Internal Transfer)**: Điều chuyển số dư giữa các ví chỉ với 1 click.
+### 3. 🧠 Cố Vấn Tài Chính AI & Phân Tích Hiệu Ứng Latte (AI Advisor)
+- Tự động thống kê các khoản chi nhỏ lẻ (`≤ 60.000₫`) tích tụ hàng tháng gây thất thoát dòng tiền (Hiệu ứng Latte).
+- Đưa ra khuyến nghị tối ưu hóa ngân sách, tính toán tiềm năng tiết kiệm và phân bổ dòng tiền tháng tới.
 
-### 4. 🎨 Bộ Sưu Tập 5 Theme Modern 2026
+<p align="center">
+  <img src="docs/assets/ai_financial_advisor.png" alt="Salaria AI Financial Advisor" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+</p>
+
+### 4. 📈 So Sánh Biến Động Đa Tháng (Multi-Month Analytics)
+- Theo dõi xu hướng tăng giảm thu chi và dòng tiền thặng dư giữa các tháng (MoM - Month over Month).
+- Biểu đồ đối chiếu chi tiết từng nhóm danh mục theo thời gian thực.
+
+<p align="center">
+  <img src="docs/assets/multi_month_compare.png" alt="Salaria Multi-Month Comparison" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+</p>
+
+### 5. 🎨 Bộ Sưu Tập 5 Theme Modern 2026
 - 🌌 **Midnight Cyber (Mặc định)**: Nền Slate đen bóng, viền xanh ngọc Emerald & Cyan công nghệ.
 - 🔮 **Neon Tokyo (Cyberpunk)**: Nền tím thẫm OLED, dạ quang Electric Violet & Cyber Pink tương lai.
 - 🌲 **Nordic Forest**: Nền rêu thông Bắc Âu, kính mờ Sage Glass dịu mắt và thư thái.
 - 🌊 **Oceanic Sapphire**: Nền xanh biển sâu Cobalt, viền xanh băng Ice Cyan phong cách Fintech.
 - ☕ **Espresso Gold**: Nền Mocha trầm ấm, điểm xuyết ánh vàng kim Champagne Gold sang trọng.
 - *Nút chọn Theme tích hợp gọn gàng ở chân Sidebar, chuyển đổi tức thì và tự động lưu trên trình duyệt.*
-
-### 5. 🧠 Cố Vấn Tài Chính AI & Phân Tích Hiệu Ứng Latte
-- Tự động thống kê các khoản chi nhỏ lẻ (`≤ 60.000₫`) tích tụ hàng tháng gây thất thoát dòng tiền (Hiệu ứng Latte).
-- Đưa ra khuyến nghị tối ưu hóa ngân sách và giảm thiểu chi phí phát sinh.
 
 ---
 
