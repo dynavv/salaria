@@ -302,11 +302,42 @@ export default {
     };
 
     // =========================================================================
-    // 0. FRONTEND SPA & STATIC ASSETS ROUTING
+    // 0. FRONTEND SPA & STATIC ASSETS ROUTING (WITH MIME TYPE INFERENCE)
     // =========================================================================
     if (!url.pathname.startsWith('/api/') && url.pathname !== '/health' && url.pathname !== '/status' && !url.searchParams.has('text') && request.method === 'GET') {
       if (env.ASSETS) {
-        return env.ASSETS.fetch(request);
+        const assetRes = await env.ASSETS.fetch(request);
+        const pathname = url.pathname.toLowerCase();
+        let mime = null;
+
+        if (pathname.endsWith('.js') || pathname.endsWith('.mjs')) {
+          mime = 'application/javascript; charset=UTF-8';
+        } else if (pathname.endsWith('.css')) {
+          mime = 'text/css; charset=UTF-8';
+        } else if (pathname.endsWith('.svg')) {
+          mime = 'image/svg+xml';
+        } else if (pathname.endsWith('.html') || pathname === '/' || !pathname.includes('.')) {
+          mime = 'text/html; charset=UTF-8';
+        } else if (pathname.endsWith('.json')) {
+          mime = 'application/json; charset=UTF-8';
+        } else if (pathname.endsWith('.png')) {
+          mime = 'image/png';
+        } else if (pathname.endsWith('.ico')) {
+          mime = 'image/x-icon';
+        } else if (pathname.endsWith('.woff2')) {
+          mime = 'font/woff2';
+        }
+
+        if (mime) {
+          const newHeaders = new Headers(assetRes.headers);
+          newHeaders.set('Content-Type', mime);
+          return new Response(assetRes.body, {
+            status: assetRes.status,
+            statusText: assetRes.statusText,
+            headers: newHeaders
+          });
+        }
+        return assetRes;
       }
     }
 
