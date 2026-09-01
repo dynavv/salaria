@@ -302,9 +302,18 @@ export default {
     };
 
     // =========================================================================
+    // 0. FRONTEND SPA & STATIC ASSETS ROUTING
+    // =========================================================================
+    if (!url.pathname.startsWith('/api/') && url.pathname !== '/health' && url.pathname !== '/status' && !url.searchParams.has('text') && request.method === 'GET') {
+      if (env.ASSETS) {
+        return env.ASSETS.fetch(request);
+      }
+    }
+
+    // =========================================================================
     // 1. HEALTH / STATUS CHECK
     // =========================================================================
-    if ((url.pathname === '/' || url.pathname === '/health' || url.pathname === '/api/status') && request.method === 'GET' && !url.searchParams.has('text')) {
+    if ((url.pathname === '/health' || url.pathname === '/api/status') && request.method === 'GET' && !url.searchParams.has('text')) {
       let dbStatus = 'Disconnected';
       let totalTransactions = 0;
 
