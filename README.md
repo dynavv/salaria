@@ -1,4 +1,4 @@
-# 💎 Salarini — AI-Powered Personal Finance & Expense Tracker
+# 💎 Salaria — AI-Powered Personal Finance & Expense Tracker
 
 > **Hệ sinh thái quản lý tài chính cá nhân tự động hóa toàn diện 2026**: Tự động bắt thông báo biến động số dư ngân hàng (MSB, ZaloPay, Google Wallet, VCB...) ➜ Ghi chép 0.1s qua Telegram Bot & Cloudflare Worker ➜ Đồng bộ hai chiều với Google Sheets ➜ Trực quan hóa trên Web App chuẩn Fintech 2026.
 
@@ -80,7 +80,7 @@ flowchart TD
 ## 📂 Cấu Trúc Thư Mục (Project Structure)
 
 ```text
-Salarini/
+Salaria/
 ├── backend/                  # Node.js + Express + TypeScript API Server
 │   └── src/
 │       ├── advisor/          # AI Financial Health & Latte Factor Engine
@@ -123,7 +123,7 @@ Salarini/
 - **NPM**: Đi kèm với Node.js.
 
 ### 2. Cài Đặt & Khởi Động
-Mở Terminal tại thư mục `Salarini`:
+Mở Terminal tại thư mục `Salaria`:
 
 ```bash
 # Cấp quyền thực thi và khởi động toàn bộ ứng dụng
@@ -208,7 +208,7 @@ Mở trình duyệt và truy cập: **[http://localhost:3001](http://localhost:3
 
 ## 🤖 Tuyên Bố Sử Dụng AI (AI & LLM Disclosure)
 
-Dự án **Salarini** được xây dựng với sự minh bạch tuyệt đối về việc ứng dụng Trí Tuệ Nhân Tạo (AI):
+Dự án **Salaria** được xây dựng với sự minh bạch tuyệt đối về việc ứng dụng Trí Tuệ Nhân Tạo (AI):
 
 ### 1. Đồng Hành Phát Triển (AI-Assisted Engineering)
 - Kiến trúc giải pháp, logic bóc tách thông báo tự động (Parser engine), và các thành phần giao diện người dùng được thiết kế, tối ưu mã nguồn với sự đồng hành của các mô hình AI tiên tiến (**Google DeepMind Antigravity** & **Gemini models**).

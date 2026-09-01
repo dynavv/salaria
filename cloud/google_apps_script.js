@@ -225,7 +225,7 @@ function handleTelegramMessage(msg) {
       workerStatus = '⚪ Chưa cấu hình Worker URL';
     }
 
-    var checkReport = '🩺 <b>SALARINI SYSTEM HEALTH CHECK</b> 🩺\n' +
+    var checkReport = '🩺 <b>SALARIA SYSTEM HEALTH CHECK</b> 🩺\n' +
       '━━━━━━━━━━━━━━━━━━\n' +
       '🤖 <b>Telegram Bot:</b> 🟢 Hoạt động tốt\n' +
       '• <b>Chat ID:</b> <code>' + ALLOWED_CHAT_ID + '</code>\n' +

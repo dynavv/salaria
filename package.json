@@ -1,7 +1,7 @@
 {
-  "name": "personal-finance-app",
+  "name": "salaria",
   "version": "1.0.0",
-  "description": "Personal Finance Management App with Telegram HTML Import & Multi-Month Analytics",
+  "description": "Salaria — Intelligent Zero-Friction Wealth Flow & AI Financial Advisor",
   "license": "GPL-3.0-or-later",
   "main": "backend/src/index.ts",
   "scripts": {
