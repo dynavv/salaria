@@ -39,7 +39,7 @@ export function App() {
     try {
       setLoading(true);
 
-      // Tự động kéo dữ liệu mới nhất từ Google Sheets / Telegram khi mở Web App
+      // Tự động kéo dữ liệu mới nhất từ Cloudflare D1 / Telegram khi mở Web App
       if (triggerAutoSync) {
         try {
           const tgConfig = await api.getTelegramConfig();

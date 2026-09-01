@@ -20,7 +20,6 @@ data/*.db-wal
 backend/*.db
 backend/*.db-shm
 backend/*.db-wal
-google_sheet_export/*.csv
 *.csv
 
 # Environment & Private Configs
@@ -32,8 +31,6 @@ backend/.env.*
 !backend/.env.example
 .dev.vars
 .dev.vars.*
-.clasp.json
-!.clasp.json.example
 
 # Cloudflare Wrangler Cache
 .wrangler/

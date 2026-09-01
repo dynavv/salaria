@@ -1,6 +1,5 @@
 import { db } from '../db';
 import { extractMoneyAndNote, matchCategory } from '../parser/telegramParser';
-import { getGoogleSheetsUrl } from './googleSheetsService';
 import { syncFromCloudflareD1 } from './d1SyncService';
 
 interface TelegramSettings {
@@ -112,87 +111,6 @@ export async function syncTelegramUpdates(): Promise<{
       }
     } catch (d1Err: any) {
       console.warn('D1 sync skipped or failed:', d1Err.message);
-    }
-
-    // 1. If Google Sheet is configured, sync from Google Sheet
-    const googleSheetUrl = getGoogleSheetsUrl();
-    if (googleSheetUrl) {
-      try {
-        const gsRes = await fetch(googleSheetUrl, { redirect: 'follow' });
-        const gsJson = await gsRes.json();
-        if (gsJson && gsJson.success && Array.isArray(gsJson.data?.transactions)) {
-          const gsTxs = gsJson.data.transactions;
-          let addedFromSheet = 0;
-          const newSheetTxs: any[] = [];
-          
-          const insertStmt = db.prepare(`
-            INSERT INTO transactions (id, date, amount, type, category_id, account_id, note, source, raw_telegram_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO NOTHING
-          `);
-
-          // Match categories and accounts dynamically
-          const catMap = new Map<string, string>();
-          const allCats = db.prepare('SELECT id, name FROM categories').all() as any[];
-          allCats.forEach(c => {
-            catMap.set(c.name.toLowerCase(), c.id);
-            catMap.set(c.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), c.id);
-          });
-
-          const accMap = new Map<string, string>();
-          const allAccs = db.prepare('SELECT id, name, type FROM accounts').all() as any[];
-          allAccs.forEach(a => {
-            accMap.set(a.name.toLowerCase(), a.id);
-            accMap.set(a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), a.id);
-            accMap.set(a.type.toLowerCase(), a.id);
-          });
-
-          for (const tx of gsTxs) {
-            // If this transaction was deleted by user on Web, skip it so it is never restored!
-            const isDeleted = db.prepare('SELECT id FROM deleted_transactions WHERE id = ?').get(tx.id);
-            if (isDeleted) continue;
-
-            const normCatName = (tx.category_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            const catId = catMap.get(normCatName) || catMap.get((tx.category_name || '').toLowerCase()) || null;
-
-            const normAccName = (tx.account_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            const accId = accMap.get(normAccName) || accMap.get((tx.account_name || '').toLowerCase()) || (tx.source === 'bank_notification' ? 'acc_bank' : 'acc_cash');
-            const exists = db.prepare('SELECT id FROM transactions WHERE id = ?').get(tx.id);
-            
-            insertStmt.run(
-              tx.id,
-              tx.date,
-              tx.amount,
-              tx.type,
-              catId,
-              accId,
-              tx.note,
-              tx.source || 'telegram_bot',
-              tx.raw_telegram_text || null
-            );
-            
-            if (!exists) {
-              addedFromSheet++;
-              newSheetTxs.push(tx);
-            }
-          }
-          
-          saveTelegramConfig({ lastSyncTime: new Date().toISOString() });
-          return {
-            success: true,
-            syncedCount: addedFromSheet,
-            transactions: newSheetTxs
-          };
-        }
-      } catch (e: any) {
-        console.error('Error syncing from Google Sheet:', e.message);
-        return {
-          success: false,
-          syncedCount: 0,
-          transactions: [],
-          error: 'Lỗi khi đồng bộ từ Google Sheet: ' + e.message
-        };
-      }
     }
 
     const offset = config.lastUpdateId > 0 ? config.lastUpdateId + 1 : 0;

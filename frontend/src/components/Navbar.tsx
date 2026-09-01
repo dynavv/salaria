@@ -115,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={handleSyncTelegram}
           disabled={syncingTg}
           className="flex items-center space-x-1.5 px-3 py-2 rounded-2xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-400 text-xs font-bold transition active:scale-95 shadow-sm"
-          title="Đồng bộ thủ công từ Google Sheets / Telegram"
+          title="Đồng bộ giao dịch từ Cloudflare D1 / Telegram"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${syncingTg ? 'animate-spin' : ''}`} />
           <span className="hidden sm:inline">{syncingTg ? 'Đang đồng bộ...' : 'Đồng bộ'}</span>

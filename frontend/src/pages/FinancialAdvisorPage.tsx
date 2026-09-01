@@ -52,8 +52,6 @@ export const FinancialAdvisorPage: React.FC<FinancialAdvisorPageProps> = ({ curr
   const [data, setData] = useState<FinancialHealthAnalysis | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [customQuestion, setCustomQuestion] = useState<string>('');
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
-  const [showKeyInput, setShowKeyInput] = useState<boolean>(false);
   const [aiAnswers, setAiAnswers] = useState<Array<{ q: string; a: string; time: string; model: string }>>([]);
   const [answering, setAnswering] = useState<boolean>(false);
 
@@ -76,11 +74,6 @@ export const FinancialAdvisorPage: React.FC<FinancialAdvisorPageProps> = ({ curr
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSaveApiKey = (key: string) => {
-    setApiKey(key);
-    localStorage.setItem('gemini_api_key', key);
   };
 
   const handleOpenDrillDownModal = async (state: DrillDownModalState) => {
@@ -219,7 +212,7 @@ export const FinancialAdvisorPage: React.FC<FinancialAdvisorPageProps> = ({ curr
     setAnswering(true);
 
     try {
-      const res = await api.askAiAdvisor(q, currentMonth, apiKey || undefined);
+      const res = await api.askAiAdvisor(q, currentMonth);
       setAiAnswers((prev) => [
         ...prev,
         {
@@ -578,45 +571,15 @@ export const FinancialAdvisorPage: React.FC<FinancialAdvisorPageProps> = ({ curr
 
       {/* AI Financial Advisor Chat Box */}
       <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Bot className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-sm font-bold text-slate-100">Hỏi Cố Vấn Tài Chính AI (Gemini Flash & Heuristic Engine)</h3>
+            <h3 className="text-sm font-bold text-slate-100">Hỏi Cố Vấn Tài Chính AI (Workers AI & Smart Advisor)</h3>
           </div>
-
-          <button
-            onClick={() => setShowKeyInput(!showKeyInput)}
-            className="text-xs text-slate-400 hover:text-emerald-400 flex items-center space-x-1 transition self-start sm:self-auto"
-          >
-            <span>{apiKey ? '🔑 Đã cài API Key Gemini' : '⚙️ Cài đặt API Key cá nhân'}</span>
-          </button>
+          <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+            Edge AI Active
+          </span>
         </div>
-
-        {showKeyInput && (
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2 animate-in fade-in">
-            <p className="text-xs text-slate-300 font-medium">
-              Nhập Google Gemini API Key để kích hoạt phân tích chuyên sâu (hoàn toàn miễn phí từ Google AI Studio):
-            </p>
-            <div className="flex items-center space-x-2">
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => handleSaveApiKey(e.target.value)}
-                placeholder="AIzaSy..."
-                className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
-              />
-              <button
-                onClick={() => setShowKeyInput(false)}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition"
-              >
-                Lưu
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              * Không bắt buộc. Nếu không có key, hệ thống sẽ sử dụng thuật toán phân tích cục bộ (Local Heuristic Engine) 100% riêng tư.
-            </p>
-          </div>
-        )}
 
         {/* AI Answer Conversation History */}
         {aiAnswers.length > 0 && (
