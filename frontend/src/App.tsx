@@ -16,7 +16,7 @@ import { api } from './api/client';
 
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem('salaria_api_key'));
+    return Boolean(sessionStorage.getItem('salaria_api_key'));
   });
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [currentMonth, setCurrentMonth] = useState<string>(new Date().toISOString().substring(0, 7));
@@ -84,6 +84,7 @@ export function App() {
   };
 
   const handleLockApp = () => {
+    sessionStorage.removeItem('salaria_api_key');
     localStorage.removeItem('salaria_api_key');
     setIsAuthenticated(false);
   };

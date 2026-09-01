@@ -20,8 +20,8 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({ onUnlocked }) => {
     try {
       const res = await api.verifyPin(pinToVerify);
       if (res.success) {
-        localStorage.setItem('salaria_api_key', pinToVerify);
-        localStorage.setItem('salaria_auth_time', Date.now().toString());
+        sessionStorage.setItem('salaria_api_key', pinToVerify);
+        localStorage.removeItem('salaria_api_key');
         onUnlocked();
       } else {
         triggerError(res.error || 'Mã PIN không đúng. Vui lòng thử lại.');
