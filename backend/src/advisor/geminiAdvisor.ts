@@ -83,7 +83,7 @@ HIỆU ỨNG LATTE (KHOẢN CHI NHỎ LẺ ≤ 60k):
 TOP CÁC DANH MỤC CHI TIÊU:
 ${monthlyStats.categories.slice(0, 6).map(c => `- ${c.categoryName}: ${c.amount.toLocaleString('vi-VN')} ₫ (${c.percentage}%)`).join('\n')}
 
-${adviceData.peakSpendingDay ? `- Ngày chi nhiều nhất: ${adviceData.peakSpendingDay.date} (${adviceData.peakSpendingDay.amount.toLocaleString('vi-VN')} ₫)` : ''}
+${monthlyStats.peakSpendingDay ? `- Ngày chi nhiều nhất: ${monthlyStats.peakSpendingDay.date} (${monthlyStats.peakSpendingDay.amount.toLocaleString('vi-VN')} ₫)` : ''}
 `;
 
   const apiKey = userApiKey || process.env.GEMINI_API_KEY;

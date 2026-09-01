@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { extractMoneyAndNote, matchCategory } from '../parser/telegramParser';
 import { getGoogleSheetsUrl } from './googleSheetsService';
+import { syncFromCloudflareD1 } from './d1SyncService';
 
 interface TelegramSettings {
   botToken: string;
@@ -102,7 +103,18 @@ export async function syncTelegramUpdates(): Promise<{
   }
 
   try {
-    // 1. If Google Sheet is configured, sync directly from Google Sheet
+    // 0. Sync from Cloudflare D1 Serverless Database (Preferred Edge Storage)
+    try {
+      const d1Result = await syncFromCloudflareD1();
+      if (d1Result.success && d1Result.syncedCount > 0) {
+        saveTelegramConfig({ lastSyncTime: new Date().toISOString() });
+        return d1Result;
+      }
+    } catch (d1Err: any) {
+      console.warn('D1 sync skipped or failed:', d1Err.message);
+    }
+
+    // 1. If Google Sheet is configured, sync from Google Sheet
     const googleSheetUrl = getGoogleSheetsUrl();
     if (googleSheetUrl) {
       try {
@@ -116,13 +128,7 @@ export async function syncTelegramUpdates(): Promise<{
           const insertStmt = db.prepare(`
             INSERT INTO transactions (id, date, amount, type, category_id, account_id, note, source, raw_telegram_text)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-              date = excluded.date,
-              amount = excluded.amount,
-              type = excluded.type,
-              category_id = excluded.category_id,
-              account_id = excluded.account_id,
-              note = excluded.note
+            ON CONFLICT(id) DO NOTHING
           `);
 
           // Match categories and accounts dynamically

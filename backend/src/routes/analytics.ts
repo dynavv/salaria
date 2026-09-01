@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getMonthlyStats, generateFinancialAdvice, getMultiMonthComparison } from '../advisor/financialAdvisor';
+import { askGeminiAdvisor } from '../advisor/geminiAdvisor';
 import { db } from '../db';
 
 export const analyticsRouter = Router();
@@ -70,7 +71,6 @@ analyticsRouter.post('/ai-ask', async (req, res) => {
     }
 
     const targetMonth = month || new Date().toISOString().substring(0, 7);
-    const { askGeminiAdvisor } = await import('../advisor/geminiAdvisor');
     const result = await askGeminiAdvisor(question, targetMonth, apiKey);
 
     res.json({
