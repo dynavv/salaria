@@ -8,10 +8,11 @@
   <img src="https://img.shields.io/badge/License-GPL--3.0--or--later-green?style=for-the-badge" alt="License">
 </p>
 
-> An automated personal finance companion that captures your bank alerts in real time — keeping you on budget without the chore of manual logging.
+> Hệ sinh thái quản lý tài chính cá nhân tự động — Tự động bắt biến động số dư ngân hàng 24/7, phân bổ ngân sách 50/30/20 và cố vấn tài chính AI.
 
 <p align="center">
-  <img src="docs/assets/dashboard_overview.png" alt="Salaria Modern Fintech Dashboard" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+  <img src="docs/assets/dashboard_overview.png" alt="Salaria Modern Fintech Dashboard" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><br>
+  <em>💻 Bảng điều khiển tài chính trung tâm (Modern Fintech Dashboard trên Desktop Web)</em>
 </p>
 
 | 📱 Dashboard Kỳ Lương | 📊 Phân Tích 50/30/20 | 🌙 Tổng Kết Tối 22h30 |
@@ -44,7 +45,8 @@
 - Cố vấn AI thông minh hỗ trợ giải đáp chiến lược ngân sách, gợi ý phương án cắt giảm chi phí và tính toán dòng tiền qua mô hình suy luận sâu **Cloudflare Workers AI (Gemma 4 26B)**.
 
 <p align="center">
-  <img src="docs/assets/ai_financial_advisor.png" alt="Salaria AI Financial Advisor" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+  <img src="docs/assets/ai_financial_advisor.png" alt="Salaria AI Financial Advisor" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><br>
+  <em>🧠 Cố vấn tài chính AI & Phân tích chi tiêu vi mô (Hiệu ứng Latte)</em>
 </p>
 
 ### 4. 📈 So Sánh Biến Động Đa Tháng & Báo Cáo Định Kỳ
@@ -52,7 +54,8 @@
 - Tự động gửi thông báo tổng kết chi tiêu mỗi tối lúc 22h30 giúp bạn nhìn lại bức tranh chi tiêu trong ngày.
 
 <p align="center">
-  <img src="docs/assets/multi_month_compare.png" alt="Salaria Multi-Month Comparison" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+  <img src="docs/assets/multi_month_compare.png" alt="Salaria Multi-Month Comparison" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><br>
+  <em>📈 Báo cáo so sánh xu hướng thu chi đa tháng (Month-over-Month Analytics)</em>
 </p>
 
 ### 5. 🔒 Bảo Mật Cá Nhân & Khóa Session PIN
