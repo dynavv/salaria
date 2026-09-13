@@ -14,6 +14,11 @@
   <img src="docs/assets/dashboard_overview.png" alt="Salaria Modern Fintech Dashboard" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
 </p>
 
+| 📱 Dashboard Kỳ Lương | 📊 Phân Tích 50/30/20 | 🌙 Tổng Kết Tối 22h30 |
+| :---: | :---: | :---: |
+| <img src="docs/assets/mobile_dashboard.png" width="100%" alt="Salaria Mobile Dashboard"/> | <img src="docs/assets/mobile_analytics_503020.png" width="100%" alt="50/30/20 Analytics"/> | <img src="docs/assets/mobile_daily_summary.png" width="100%" alt="Daily Summary 22h30"/> |
+| *Dự báo chi tiêu & Cột mốc dòng tiền* | *Sức khỏe tài chính & 3 trụ cột* | *Hạn mức an toàn & Lời khuyên AI* |
+
 ---
 
 ## 🌟 Tính Năng Nổi Bật (Key Features)
