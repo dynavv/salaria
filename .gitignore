@@ -61,4 +61,9 @@ android/**/debug/*.apk
 *.apk
 *.aab
 
+# AI Agent Guidelines & Internal Configs
+GEMINI.md
+FRAMEWORK.md
+.agents/
+
 

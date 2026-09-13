@@ -111,29 +111,27 @@ flowchart TD
 
 ---
 
-## 📂 Cấu Trúc Thư Mục Chuẩn Hóa (Project Structure)
+## 📂 Cấu Trúc Thư Mục (Project Structure)
 
 ```text
-Salarini/
-├── 📄 GEMINI.md              # 🧭 Hiến pháp AI Agent: Bản đồ mã nguồn, triage P0/P3, hành động cấm kỵ
-├── 📄 FRAMEWORK.md           # 📐 Khung kỹ nghệ phát triển phần mềm chuẩn mực từ ý tưởng đến triển khai
-├── 📄 README.md              # 🌟 Mặt tiền dự án & hướng dẫn kiến trúc vận hành
-├── 📁 android/               # 📱 Native Android App (Kotlin, Jetpack Compose, Room DB, WorkManager)
-│   ├── app/src/main/java/    # Kiến trúc dịch vụ ngầm 24/7, UI Components và DataStore
-│   └── build.gradle.kts      # Cấu hình Gradle nạp biến an toàn từ local.properties
-├── 📁 backend/               # ☁️ Cloudflare Worker REST API & D1 SQLite Database
-│   ├── src/                  # Mã nguồn TypeScript Modular (routes, services, AI engine, telemetry)
-│   ├── migrations/           # D1 SQL Migrations (0001 schema, 0002 daily summaries)
-│   └── wrangler.jsonc        # Cấu hình binding Worker D1, AI và Assets
-├── 📁 frontend/              # 💻 React 18 + Vite + Tailwind CSS Desktop Web App
-│   ├── src/                  # Dashboard, AI Advisor, Analytics, Theme Engine & PIN Screen
-│   └── vite.config.ts        # Vite proxy và tối ưu bundle build
-└── 📁 docs/                  # 🧠 Trung tâm tri thức & quản trị kỹ nghệ
-    ├── 📄 architecture.md    # 🗺️ Bản đồ luồng dữ liệu chi tiết
-    ├── 📄 feature-map.md     # 🗺️ Ma trận tính năng & file liên đới
-    ├── 📄 backlog.md         # 📋 Danh sách công việc P0 - P3 (Chuẩn MoSCoW)
-    ├── 📁 plans/             # 📑 Kế hoạch thực thi chi tiết các tính năng
-    └── 📁 adr/               # 🏛️ Architecture Decision Records (Lưu các quyết định kỹ thuật cốt lõi)
+salaria/
+├── android/
+│   ├── app/src/main/java/
+│   └── build.gradle.kts
+├── backend/
+│   ├── migrations/
+│   ├── src/
+│   └── wrangler.jsonc
+├── frontend/
+│   ├── src/
+│   └── vite.config.ts
+├── docs/
+│   ├── adr/
+│   ├── architecture.md
+│   ├── backlog.md
+│   ├── feature-map.md
+│   └── plans/
+└── README.md
 ```
 
 ---
