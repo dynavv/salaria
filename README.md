@@ -50,13 +50,10 @@
   <img src="docs/assets/multi_month_compare.png" alt="Salaria Multi-Month Comparison" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
 </p>
 
-### 5. 🎨 Bộ Sưu Tập 5 Theme Modern 2026 & Bảo Mật Session PIN
-- 🌌 **Midnight Cyber (Mặc định)**: Nền Slate đen bóng, viền xanh ngọc Emerald & Cyan công nghệ.
-- 🔮 **Neon Tokyo (Cyberpunk)**: Nền tím thẫm OLED, dạ quang Electric Violet & Cyber Pink tương lai.
-- 🌲 **Nordic Forest**: Nền rêu thông Bắc Âu, kính mờ Sage Glass dịu mắt và thư thái.
-- 🌊 **Oceanic Sapphire**: Nền xanh biển sâu Cobalt, viền xanh băng Ice Cyan phong cách Fintech.
-- ☕ **Espresso Gold**: Nền Mocha trầm ấm, điểm xuyết ánh vàng kim Champagne Gold sang trọng.
-- 🔒 **Khóa Bảo Mật Session PIN**: Tự động khóa bảo vệ dữ liệu khi đóng tab trình duyệt; hỗ trợ tùy biến mã PIN quản trị viên linh hoạt.
+### 5. 🔒 Bảo Mật Cá Nhân & Khóa Session PIN
+- **Tự động khóa bảo vệ dữ liệu**: Tự động khóa bảo mật khi đóng tab trình duyệt hoặc rời ứng dụng, bảo vệ quyền riêng tư cho sổ tài chính cá nhân.
+- **Xác thực mã PIN 6 số**: Tích hợp bàn phím số ảo bảo mật, thao tác nhanh gọn và an toàn.
+- **Hỗ trợ Chế độ Tối & Sáng (Dark / Light Mode)**: Tùy biến hiển thị linh hoạt giữa chế độ Tối (Deep Navy dịu mắt) và chế độ Sáng (Clean Canvas phong cách GitHub).
 
 ---
 
@@ -101,7 +98,7 @@ flowchart TD
     end
 
     subgraph WebClient ["💻 Bảng Điều Khiển Máy Tính (Modern Desktop Web)"]
-        ReactUI["⚛️ Salaria Web App (React 18 + Vite + Tailwind CSS)<br/>(Dashboard toàn cảnh, Cố vấn AI, Bộ 5 Theme Fintech, Session PIN Lock)"]
+        ReactUI["⚛️ Salaria Web App (React 18 + Vite + Tailwind CSS)<br/>(Dashboard toàn cảnh, Cố vấn AI, Giao diện Tối & Sáng, Session PIN Lock)"]
     end
 
     Listener -->|HTTPS Ingest API| Worker
