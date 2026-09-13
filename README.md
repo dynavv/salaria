@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-GPL--3.0--or--later-green?style=for-the-badge" alt="License">
 </p>
 
-> Hệ sinh thái quản lý tài chính cá nhân tự động — Tự động bắt biến động số dư ngân hàng 24/7, phân bổ ngân sách 50/30/20 và cố vấn tài chính AI.
+> Trợ lý tài chính cá nhân tự động bắt biến động số dư ngân hàng và phân loại bằng AI theo thời gian thực — Giúp bạn luôn kiểm soát tốt ngân sách mà không cần tốn công ghi chép thủ công.
 
 <p align="center">
   <img src="docs/assets/dashboard_overview.png" alt="Salaria Modern Fintech Dashboard" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);"><br>
