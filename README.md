@@ -20,19 +20,19 @@
 
 ### 1. 📱 Lắng Nghe Biến Động Số Dư Ngân Hàng 24/7 & AI Chat Logging
 - **Real-Time Bank Notification Auto-Capture**: Tự động bắt biến động số dư tức thì 24/7 chạy ngầm tầng OS trực tiếp qua **Salaria Native Android App** (*MSB DigiBank, ZaloPay, Google Wallet, HSBC, Vietcombank, Techcombank, VPBank, TPBank, MoMo...*).
-- **Title-First Smart Ingestion**: Cơ chế lọc tiền thông minh từ tiêu đề thông báo kết hợp bộ lọc tự động thử lại khi thông báo bị che (`RetryScanReceiver`).
+- **Title-First Smart Ingestion**: Cơ chế lọc tiền thông minh từ tiêu đề thông báo kết hợp bộ lọc tự động quét lại khi thông báo bị ẩn nội dung trên màn hình khóa.
 - **Phân loại AI Đa Tầng (3-Tier Engine)**:
   - **Tầng 1 (0ms Word-Boundary Regex)**: Khớp từ khóa chuẩn từ danh mục với cơ chế chống va chạm từ con.
   - **Tầng 2 (Cloudflare Workers AI - Llama 3.2 3B)**: Bóc tách ngữ cảnh món ăn, quán xá, thương hiệu trên mạng GPU Edge siêu tốc (< 0.2s).
-  - **Tầng 3 (Data Safety Fallback)**: Giữ trạng thái an toàn `Chưa phân loại` (`category_id = NULL`) với các giao dịch mơ hồ hoặc chuyển khoản không rõ nội dung.
-- **Zero-Latency In-App AI Chat**: Ghi chép thu chi siêu tốc bằng ngôn ngữ tự nhiên (`35k cafe`, `-45k cơm trưa`, `+15tr lương cty`, `rút 500k atm`). Bộ nhớ đệm phiên Chat 0ms (`ChatManager`), hỗ trợ cử chỉ vuốt để trích dẫn giao dịch và lệnh hoàn tác nhanh `/undo`.
+  - **Tầng 3 (Data Safety Fallback)**: Giữ trạng thái an toàn `Chưa phân loại` đối với các giao dịch mơ hồ hoặc chuyển khoản không rõ nội dung.
+- **Zero-Latency In-App AI Chat**: Ghi chép thu chi siêu tốc bằng ngôn ngữ tự nhiên (`35k cafe`, `-45k cơm trưa`, `+15tr lương cty`, `rút 500k atm`). Phản hồi tức thì 0ms, hỗ trợ cử chỉ vuốt để trích dẫn giao dịch và lệnh hoàn tác nhanh `/undo`.
 
 ### 2. 📊 Bảng Điều Khiển Tài Chính Fintech 2026 (Modern Dashboard)
 - **Financial Health Score Gauge (0 - 100)**: Vòng đo sức khỏe tài chính tính toán theo thời gian thực dựa trên tỷ lệ tích lũy và cấu trúc chi tiêu.
 - **Daily Burn Rate & Month-End Projection**: Đo lường tốc độ "đốt tiền" trung bình mỗi ngày và dự báo tổng chi tiêu cuối tháng.
 - **Safe Daily Spending**: Hạn mức chi tiêu an toàn còn lại mỗi ngày để đảm bảo hoàn thành mục tiêu tiết kiệm ≥ 20%.
 - **Biểu đồ cột tương tác (Interactive Daily Spending)**: Tự động đổi màu theo mức độ chi (Xanh = Dưới TB, Cam = Vượt TB, Đỏ = Đột biến), tương tác trực tiếp để kiểm tra chi tiết từng ngày.
-- **Đo lường Quy tắc 50/30/20 & Chu kỳ kỳ lương**: Theo dõi 3 trụ cột: *50% Thiết yếu (Needs)*, *30% Linh hoạt (Wants)*, *20% Tích lũy (Savings)* khớp theo ngày nhận lương thực tế (`PaycheckCycleHelper`).
+- **Đo lường Quy tắc 50/30/20 & Chu kỳ kỳ lương**: Theo dõi 3 trụ cột: *50% Thiết yếu (Needs)*, *30% Linh hoạt (Wants)*, *20% Tích lũy (Savings)* khớp theo ngày nhận lương thực tế mỗi tháng.
 
 ### 3. 🧠 Cố Vấn Tài Chính AI & Phân Tích Hiệu Ứng Latte (AI Advisor)
 - Tự động phát hiện và cảnh báo các khoản chi nhỏ lẻ (`≤ 60.000₫`) tích tụ hàng tháng gây thất thoát dòng tiền (Hiệu ứng Latte).
@@ -44,7 +44,7 @@
 
 ### 4. 📈 So Sánh Biến Động Đa Tháng & Báo Cáo Định Kỳ
 - Theo dõi xu hướng tăng giảm thu chi và dòng tiền thặng dư giữa các tháng (MoM - Month over Month).
-- Tự động tạo thông báo tổng kết chi tiêu mỗi tối lúc 22h30 qua Android WorkManager (`DailySummaryWorker`).
+- Tự động gửi thông báo tổng kết chi tiêu mỗi tối lúc 22h30 giúp bạn nhìn lại bức tranh chi tiêu trong ngày.
 
 <p align="center">
   <img src="docs/assets/multi_month_compare.png" alt="Salaria Multi-Month Comparison" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
@@ -145,7 +145,7 @@ Người dùng có thể nhập trực tiếp tại thanh nhập liệu **AI Cha
 | **Chi tiêu cơ bản** | `35k cafe` hoặc `45k com trua` | Tự động gán `-35.000₫` vào `[Ăn uống]` (0ms Regex) |
 | **Thương hiệu / Địa điểm** | `180k Haidilao Landmark` | Llama 3.2 tự bóc tách `Haidilao` và gán vào `[Ăn uống]` (<0.2s) |
 | **Ứng dụng / Dịch vụ** | `1200k ELSA Speak goi 1 nam` | Llama 3.2 nhận diện `ELSA Speak` và gán vào `[Học tập]` |
-| **Chuyển tiền / Rút tiền** | `rút 500k atm` hoặc `chuyển 2tr cho vợ` | Tự nhận diện giao dịch luân chuyển ví (`transfer`), bảo toàn tổng số dư |
+| **Chuyển tiền / Rút tiền** | `rút 500k atm` hoặc `chuyển 2tr cho vợ` | Tự nhận diện giao dịch luân chuyển giữa các ví (chuyển khoản), bảo toàn tổng số dư |
 | **Thu nhập** | `+15tr luong cty` hoặc `500k thuong kpi` | Tự gán `+15.000.000₫` vào `[Thu nhập]` |
 | **Hoàn tác siêu tốc** | `/undo` hoặc `/xoa` | Xóa ngay giao dịch vừa ghi nhận mà không cần mở sổ chi tiêu |
 
