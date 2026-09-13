@@ -1,6 +1,10 @@
 # 💎 Salaria
 
 <p align="center">
+  <b>🇻🇳 Tiếng Việt</b> &nbsp;|&nbsp; <a href="README_en.md">🇬🇧 English</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Web%20%7C%20Cloudflare-blue?style=for-the-badge&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Backend-Cloudflare%20Workers%20%28TypeScript%29-F38020?style=for-the-badge&logo=cloudflare">
   <img src="https://img.shields.io/badge/Database-Cloudflare%20D1%20%28Edge%20SQLite%29-4285F4?style=for-the-badge&logo=sqlite">
