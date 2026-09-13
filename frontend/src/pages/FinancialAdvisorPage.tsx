@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, 
   ShieldCheck, 
@@ -12,15 +12,16 @@ import {
   Send, 
   Bot, 
   CheckCircle2, 
-  HelpCircle,
-  Flame,
-  ChevronRight,
-  X,
-  Wallet,
-  MousePointerClick,
-  Layers,
-  Calendar,
-  Tag
+  HelpCircle, 
+  Flame, 
+  ChevronRight, 
+  X, 
+  Wallet, 
+  MousePointerClick, 
+  Layers, 
+  Calendar, 
+  Tag, 
+  Trash2 
 } from 'lucide-react';
 import { FinancialHealthAnalysis, Transaction } from '../types';
 import { api } from '../api/client';
@@ -54,6 +55,7 @@ export const FinancialAdvisorPage: React.FC<FinancialAdvisorPageProps> = ({ curr
   const [customQuestion, setCustomQuestion] = useState<string>('');
   const [aiAnswers, setAiAnswers] = useState<Array<{ q: string; a: string; time: string; model: string }>>([]);
   const [answering, setAnswering] = useState<boolean>(false);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // Drill down modal state
   const [modalState, setModalState] = useState<DrillDownModalState | null>(null);
@@ -63,6 +65,12 @@ export const FinancialAdvisorPage: React.FC<FinancialAdvisorPageProps> = ({ curr
   useEffect(() => {
     loadAdvisorData();
   }, [currentMonth, refreshTrigger]);
+
+  useEffect(() => {
+    if (aiAnswers.length > 0 || answering) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [aiAnswers, answering]);
 
   const loadAdvisorData = async () => {
     try {
@@ -576,30 +584,83 @@ export const FinancialAdvisorPage: React.FC<FinancialAdvisorPageProps> = ({ curr
             <Bot className="w-5 h-5 text-emerald-400" />
             <h3 className="text-sm font-bold text-slate-100">Hỏi Cố Vấn Tài Chính AI (Workers AI & Smart Advisor)</h3>
           </div>
-          <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
-            Edge AI Active
-          </span>
+          <div className="flex items-center space-x-2">
+            {aiAnswers.length > 0 && (
+              <button
+                onClick={() => setAiAnswers([])}
+                className="flex items-center space-x-1 text-[11px] px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-slate-200 border border-slate-700 transition"
+                title="Xóa lịch sử hội thoại"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Xóa lịch sử</span>
+              </button>
+            )}
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+              Edge AI Active
+            </span>
+          </div>
         </div>
 
         {/* AI Answer Conversation History */}
         {aiAnswers.length > 0 && (
-          <div className="space-y-3 pt-2 max-h-96 overflow-y-auto">
+          <div className="space-y-4 pt-2 max-h-[520px] overflow-y-auto pr-1">
             {aiAnswers.map((item, idx) => (
-              <div key={idx} className="space-y-2 p-4 rounded-xl bg-slate-800/60 border border-slate-700/80 text-xs">
-                <div className="flex items-center justify-between text-slate-400 border-b border-slate-700/60 pb-1.5">
-                  <span className="font-bold text-slate-200">❓ Bạn: "{item.q}"</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-emerald-400 border border-slate-700">
+              <div key={idx} className="space-y-2.5 p-4 rounded-xl bg-slate-800/70 border border-slate-700/80 text-xs shadow-inner">
+                <div className="flex items-center justify-between text-slate-400 border-b border-slate-700/60 pb-2">
+                  <span className="font-bold text-slate-100 flex items-center space-x-1.5">
+                    <span className="text-emerald-400">❓ Bạn:</span>
+                    <span>"{item.q}"</span>
+                  </span>
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-600/30 font-mono font-semibold">
                       {item.model}
                     </span>
-                    <span>{item.time}</span>
+                    <span className="text-[11px] text-slate-500">{item.time}</span>
                   </div>
                 </div>
-                <div className="text-slate-200 whitespace-pre-wrap leading-relaxed pt-1">
-                  {item.a}
+                <div className="text-slate-200 space-y-1.5 pt-1">
+                  {item.a.split('\n').map((line, lIdx) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return <div key={lIdx} className="h-1" />;
+
+                    if (trimmed.startsWith('###') || trimmed.startsWith('##') || trimmed.startsWith('#')) {
+                      return (
+                        <h5 key={lIdx} className="font-bold text-emerald-400 text-xs mt-2">
+                          {trimmed.replace(/^#+\s*/, '')}
+                        </h5>
+                      );
+                    }
+
+                    const isBullet = trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*');
+                    const cleanContent = isBullet ? trimmed.replace(/^[-•*]\s*/, '') : trimmed;
+                    const parts = cleanContent.split(/(\*\*.*?\*\*)/g);
+
+                    const formattedContent = parts.map((part, pIdx) => {
+                      if (part.startsWith('**') && part.endsWith('**')) {
+                        return (
+                          <strong key={pIdx} className="font-bold text-emerald-300">
+                            {part.slice(2, -2)}
+                          </strong>
+                        );
+                      }
+                      return part;
+                    });
+
+                    if (isBullet) {
+                      return (
+                        <div key={lIdx} className="flex items-start space-x-2 pl-1">
+                          <span className="text-emerald-400 font-bold select-none leading-relaxed">•</span>
+                          <div className="flex-1 leading-relaxed">{formattedContent}</div>
+                        </div>
+                      );
+                    }
+
+                    return <p key={lIdx} className="leading-relaxed">{formattedContent}</p>;
+                  })}
                 </div>
               </div>
             ))}
+            <div ref={chatEndRef} />
           </div>
         )}
 

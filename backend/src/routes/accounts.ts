@@ -1,76 +1,79 @@
-import { Router } from 'express';
-import { db } from '../db';
+/**
+ * 💎 SALARIA BACKEND — ACCOUNTS ROUTE HANDLER (CRUD)
+ */
 
-export const accountsRouter = Router();
+import { Env } from '../types';
+import { jsonResponse } from '../utils/response';
 
-// GET all accounts with calculated balances
-accountsRouter.get('/', (req, res) => {
-  try {
-    const accounts = db.prepare(`
+export async function handleAccounts(request: Request, env: Env, url: URL): Promise<Response | null> {
+  if (url.pathname === '/api/accounts' && request.method === 'GET') {
+    if (!env.DB) return jsonResponse({ success: false, error: 'Database not bound' }, 500);
+    const accounts = await env.DB.prepare(`
       SELECT a.*, 
         (a.initial_balance + 
           COALESCE((SELECT SUM(amount) FROM transactions WHERE account_id = a.id AND type = 'income'), 0) -
           COALESCE((SELECT SUM(amount) FROM transactions WHERE account_id = a.id AND type = 'expense'), 0) -
           COALESCE((SELECT SUM(amount) FROM transactions WHERE account_id = a.id AND type = 'transfer'), 0) +
           COALESCE((SELECT SUM(amount) FROM transactions WHERE destination_account_id = a.id AND type = 'transfer'), 0)
-        ) as current_balance
+        ) as current_balance,
+        (a.initial_balance + 
+          COALESCE((SELECT SUM(amount) FROM transactions WHERE account_id = a.id AND type = 'income'), 0) -
+          COALESCE((SELECT SUM(amount) FROM transactions WHERE account_id = a.id AND type = 'expense'), 0) -
+          COALESCE((SELECT SUM(amount) FROM transactions WHERE account_id = a.id AND type = 'transfer'), 0) +
+          COALESCE((SELECT SUM(amount) FROM transactions WHERE destination_account_id = a.id AND type = 'transfer'), 0)
+        ) as balance
       FROM accounts a
-      ORDER BY a.is_default DESC, a.created_at ASC
+      ORDER BY a.is_default DESC, a.name ASC
     `).all();
-
-    res.json({ success: true, data: accounts });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    return jsonResponse({ success: true, data: accounts.results || [] });
   }
-});
 
-// POST create account
-accountsRouter.post('/', (req, res) => {
-  try {
-    const { name, type, initial_balance = 0, currency = 'VND', icon = 'Wallet', color = '#3b82f6' } = req.body;
-    if (!name) return res.status(400).json({ success: false, error: 'Tên ví là bắt buộc' });
+  if (url.pathname === '/api/accounts' && request.method === 'POST') {
+    if (!env.DB) return jsonResponse({ success: false, error: 'Database not bound' }, 500);
+    const body: any = await request.json();
+    const id = body.id || `acc_${Date.now()}`;
+    const name = body.name || 'Tài khoản mới';
+    const type = body.type || 'cash';
+    const balance = Number(body.balance) || 0;
+    const initial_balance = Number(body.initial_balance) || balance;
+    const currency = body.currency || 'VND';
+    const icon = body.icon || 'Wallet';
+    const color = body.color || '#3b82f6';
+    const is_default = body.is_default ? 1 : 0;
 
-    const id = `acc_${Date.now()}`;
-    db.prepare(`
-      INSERT INTO accounts (id, name, type, balance, initial_balance, currency, icon, color)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, type || 'cash', initial_balance, initial_balance, currency, icon, color);
+    await env.DB.prepare(`
+      INSERT INTO accounts (id, name, type, balance, initial_balance, currency, icon, color, is_default)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(id, name, type, balance, initial_balance, currency, icon, color, is_default).run();
 
-    res.json({ success: true, data: { id, name, type, balance: initial_balance } });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    return jsonResponse({ success: true, data: { id, name, type, balance, initial_balance, currency, icon, color, is_default } }, 201);
   }
-});
 
-// PUT update account
-accountsRouter.put('/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, type, initial_balance, icon, color } = req.body;
-
-    db.prepare(`
-      UPDATE accounts 
-      SET name = COALESCE(?, name),
-          type = COALESCE(?, type),
-          initial_balance = COALESCE(?, initial_balance),
-          icon = COALESCE(?, icon),
-          color = COALESCE(?, color)
+  if (url.pathname.startsWith('/api/accounts/') && request.method === 'PUT') {
+    if (!env.DB) return jsonResponse({ success: false, error: 'Database not bound' }, 500);
+    const id = url.pathname.replace('/api/accounts/', '');
+    const body: any = await request.json();
+    await env.DB.prepare(`
+      UPDATE accounts SET
+        name = COALESCE(?, name),
+        type = COALESCE(?, type),
+        balance = COALESCE(?, balance),
+        initial_balance = COALESCE(?, initial_balance),
+        icon = COALESCE(?, icon),
+        color = COALESCE(?, color),
+        is_default = COALESCE(?, is_default)
       WHERE id = ?
-    `).run(name, type, initial_balance, icon, color, id);
+    `).bind(body.name, body.type, body.balance, body.initial_balance, body.icon, body.color, body.is_default, id).run();
 
-    res.json({ success: true, message: 'Đã cập nhật ví thành công' });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    return jsonResponse({ success: true, message: 'Account updated' });
   }
-});
 
-// DELETE account
-accountsRouter.delete('/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-    db.prepare('DELETE FROM accounts WHERE id = ?').run(id);
-    res.json({ success: true, message: 'Đã xóa ví thành công' });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  if (url.pathname.startsWith('/api/accounts/') && request.method === 'DELETE') {
+    if (!env.DB) return jsonResponse({ success: false, error: 'Database not bound' }, 500);
+    const id = url.pathname.replace('/api/accounts/', '');
+    await env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(id).run();
+    return jsonResponse({ success: true, message: 'Account deleted' });
   }
-});
+
+  return null;
+}

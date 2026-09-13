@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { ThemeSelector } from './ThemeSelector';
 
-export type TabType = 'dashboard' | 'compare' | 'advisor' | 'transactions' | 'accounts' | 'categories' | 'backup';
+export type TabType = 'dashboard' | 'compare' | 'advisor' | 'transactions' | 'accounts' | 'categories';
 
 interface SidebarProps {
   activeTab: TabType;

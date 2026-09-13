@@ -44,39 +44,6 @@ export interface Transaction {
   destination_account_name?: string;
 }
 
-export interface ParsedTransaction {
-  id: string;
-  rawText: string;
-  date: string;
-  time?: string;
-  amount: number;
-  type: 'expense' | 'income' | 'transfer';
-  categoryId: string | null;
-  categoryName: string;
-  categoryIcon: string;
-  categoryColor: string;
-  accountId: string;
-  note: string;
-  confidence: number;
-  selected?: boolean;
-}
-
-export interface TelegramParseResult {
-  transactions: ParsedTransaction[];
-  unparsedMessages: Array<{
-    date: string;
-    text: string;
-    reason: string;
-  }>;
-  totalParsed: number;
-  totalAmountExpense: number;
-  totalAmountIncome: number;
-  dateRange: {
-    start: string;
-    end: string;
-  };
-}
-
 export interface MonthlyStats {
   month: string;
   totalIncome: number;

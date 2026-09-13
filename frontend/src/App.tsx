@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar, TabType } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { QuickAddModal } from './components/QuickAddModal';
-import { TelegramBotConfigModal } from './components/TelegramBotConfigModal';
 import { PinLockScreen } from './components/PinLockScreen';
 import { DashboardPage } from './pages/DashboardPage';
-import { TelegramImportPage } from './pages/TelegramImportPage';
 import { MultiMonthComparePage } from './pages/MultiMonthComparePage';
 import { FinancialAdvisorPage } from './pages/FinancialAdvisorPage';
 import { TransactionsPage } from './pages/TransactionsPage';
@@ -24,35 +22,18 @@ export function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [isTelegramConfigOpen, setIsTelegramConfigOpen] = useState(false);
-  const [telegramBotUsername, setTelegramBotUsername] = useState<string>('');
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      loadInitialData(true);
+      loadInitialData();
     }
   }, [isAuthenticated]);
 
-  const loadInitialData = async (triggerAutoSync: boolean = false) => {
+  const loadInitialData = async () => {
     try {
       setLoading(true);
-
-      // Tự động kéo dữ liệu mới nhất từ Cloudflare D1 / Telegram khi mở Web App
-      if (triggerAutoSync) {
-        try {
-          const tgConfig = await api.getTelegramConfig();
-          if (tgConfig.botUsername) {
-            setTelegramBotUsername(tgConfig.botUsername);
-          }
-          if (tgConfig.configured) {
-            await api.syncTelegram();
-          }
-        } catch (e) {
-          // Ignore auto-sync network errors on startup
-        }
-      }
 
       const [accs, cats, months] = await Promise.all([
         api.getAccounts(),
@@ -78,8 +59,8 @@ export function App() {
     }
   };
 
-  const handleRefresh = async (options?: { skipTelegramSync?: boolean }) => {
-    await loadInitialData(!options?.skipTelegramSync);
+  const handleRefresh = async () => {
+    await loadInitialData();
     setRefreshTrigger((prev) => prev + 1);
   };
 
@@ -113,8 +94,6 @@ export function App() {
           availableMonths={availableMonths}
           onOpenQuickAdd={() => setIsQuickAddOpen(true)}
           onRefresh={handleRefresh}
-          onOpenTelegramConfig={() => setIsTelegramConfigOpen(true)}
-          telegramBotUsername={telegramBotUsername}
           loading={loading}
         />
 
@@ -164,13 +143,6 @@ export function App() {
         accounts={accounts}
         categories={categories}
         onSuccess={handleRefresh}
-      />
-
-      {/* Telegram Bot Auto-Sync Configuration Modal */}
-      <TelegramBotConfigModal
-        isOpen={isTelegramConfigOpen}
-        onClose={() => setIsTelegramConfigOpen(false)}
-        onSyncSuccess={handleRefresh}
       />
     </div>
   );

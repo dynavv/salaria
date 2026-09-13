@@ -1,6 +1,14 @@
-# 💎 Salaria — Serverless Cloud-Native AI Personal Finance & Expense Tracker
+# 💎 Salaria
 
-> **Hệ sinh thái quản lý tài chính cá nhân tự động hóa toàn diện 2026**: Tự động bắt thông báo biến động số dư ngân hàng (*MSB, ZaloPay, Google Wallet, VCB, MoMo, Techcombank...*) ➜ Bóc tách & phân loại thông minh qua **Cloudflare Workers AI (Llama 3.2 3B)** trong 0.1s ➜ Lưu trữ trên **Cloudflare D1 Database** ➜ Trực quan hóa trên **Modern Fintech Dashboard** chuẩn 2026 với 5 giao diện đổi màu & Cố vấn Tài chính AI.
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Web%20%7C%20Cloudflare-blue?style=for-the-badge&logo=android" alt="Platform">
+  <img src="https://img.shields.io/badge/Backend-Cloudflare%20Workers%20%28TypeScript%29-F38020?style=for-the-badge&logo=cloudflare">
+  <img src="https://img.shields.io/badge/Database-Cloudflare%20D1%20%28Edge%20SQLite%29-4285F4?style=for-the-badge&logo=sqlite">
+  <img src="https://img.shields.io/badge/AI-Gemma%204%2026B%20%7C%20Llama%203.2-8E44AD?style=for-the-badge">
+  <img src="https://img.shields.io/badge/License-GPL--3.0--or--later-green?style=for-the-badge" alt="License">
+</p>
+
+> An automated personal finance companion that captures your bank alerts in real time — keeping you on budget without the chore of manual logging.
 
 <p align="center">
   <img src="docs/assets/dashboard_overview.png" alt="Salaria Modern Fintech Dashboard" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
@@ -10,39 +18,39 @@
 
 ## 🌟 Tính Năng Nổi Bật (Key Features)
 
-### 1. 🤖 Tự Động Hóa Telegram Bot & Bắt Biến Động Số Dư Ngân Hàng 24/7
-- **Zero-Friction Fast Logging**: Ghi chép thu chi siêu tốc bằng ngôn ngữ tự nhiên (`35k cafe`, `-45k cơm trưa`, `+15tr lương cty`).
-- **Real-Time Bank Notification Auto-Capture**: Bắt biến động số dư tức thì qua MacroDroid trên Android (*MSB DigiBank, ZaloPay, Google Wallet, HSBC, Vietcombank, Techcombank, VPBank, TPBank, MoMo...*).
-- **Phân loại AI Đa tầng (3-Tier Engine)**:
-  - **Tầng 1 (0ms Regex)**: Khớp từ khóa từ bảng `categories` trên D1 Database với cơ chế **Word-Boundary** chống va chạm từ con.
-  - **Tầng 2 (Cloudflare Workers AI)**: Tự động gọi **Llama 3.2 3B** trên mạng GPU Edge để hiểu ngữ cảnh, thương hiệu quán ăn, bóc tách tên món và gán danh mục chính xác (< 0.2s).
-  - **Tầng 3 (Data Safety Fallback)**: Tự động giữ trạng thái `Chưa phân loại` (`category_id = NULL`) với các giao dịch mơ hồ hoặc chuyển khoản không rõ nội dung.
-- **Hoàn tác & Phản hồi tức thì**: Bot phản hồi xác nhận phân loại ngay trên Telegram chỉ sau ~0.2 giây. Hỗ trợ hoàn tác nhanh bằng lệnh `/undo` hoặc `/xoa`.
+### 1. 📱 Lắng Nghe Biến Động Số Dư Ngân Hàng 24/7 & AI Chat Logging
+- **Real-Time Bank Notification Auto-Capture**: Tự động bắt biến động số dư tức thì 24/7 chạy ngầm tầng OS trực tiếp qua **Salaria Native Android App** (*MSB DigiBank, ZaloPay, Google Wallet, HSBC, Vietcombank, Techcombank, VPBank, TPBank, MoMo...*).
+- **Title-First Smart Ingestion**: Cơ chế lọc tiền thông minh từ tiêu đề thông báo kết hợp bộ lọc tự động thử lại khi thông báo bị che (`RetryScanReceiver`).
+- **Phân loại AI Đa Tầng (3-Tier Engine)**:
+  - **Tầng 1 (0ms Word-Boundary Regex)**: Khớp từ khóa chuẩn từ danh mục với cơ chế chống va chạm từ con.
+  - **Tầng 2 (Cloudflare Workers AI - Llama 3.2 3B)**: Bóc tách ngữ cảnh món ăn, quán xá, thương hiệu trên mạng GPU Edge siêu tốc (< 0.2s).
+  - **Tầng 3 (Data Safety Fallback)**: Giữ trạng thái an toàn `Chưa phân loại` (`category_id = NULL`) với các giao dịch mơ hồ hoặc chuyển khoản không rõ nội dung.
+- **Zero-Latency In-App AI Chat**: Ghi chép thu chi siêu tốc bằng ngôn ngữ tự nhiên (`35k cafe`, `-45k cơm trưa`, `+15tr lương cty`, `rút 500k atm`). Bộ nhớ đệm phiên Chat 0ms (`ChatManager`), hỗ trợ cử chỉ vuốt để trích dẫn giao dịch và lệnh hoàn tác nhanh `/undo`.
 
 ### 2. 📊 Bảng Điều Khiển Tài Chính Fintech 2026 (Modern Dashboard)
 - **Financial Health Score Gauge (0 - 100)**: Vòng đo sức khỏe tài chính tính toán theo thời gian thực dựa trên tỷ lệ tích lũy và cấu trúc chi tiêu.
 - **Daily Burn Rate & Month-End Projection**: Đo lường tốc độ "đốt tiền" trung bình mỗi ngày và dự báo tổng chi tiêu cuối tháng.
 - **Safe Daily Spending**: Hạn mức chi tiêu an toàn còn lại mỗi ngày để đảm bảo hoàn thành mục tiêu tiết kiệm ≥ 20%.
-- **Biểu đồ cột tương tác (Interactive Daily Spending)**: Tự động đổi màu theo mức độ chi (Xanh = Dưới TB, Cam = Vượt TB, Đỏ = Đột biến), bấm vào cột để xem chi tiết từng ngày.
-- **Đo lường Quy tắc 50/30/20**: Theo dõi sát sao 3 trụ cột: *50% Thiết yếu (Needs)*, *30% Linh hoạt (Wants)*, *20% Tích lũy (Savings)*.
+- **Biểu đồ cột tương tác (Interactive Daily Spending)**: Tự động đổi màu theo mức độ chi (Xanh = Dưới TB, Cam = Vượt TB, Đỏ = Đột biến), tương tác trực tiếp để kiểm tra chi tiết từng ngày.
+- **Đo lường Quy tắc 50/30/20 & Chu kỳ kỳ lương**: Theo dõi 3 trụ cột: *50% Thiết yếu (Needs)*, *30% Linh hoạt (Wants)*, *20% Tích lũy (Savings)* khớp theo ngày nhận lương thực tế (`PaycheckCycleHelper`).
 
 ### 3. 🧠 Cố Vấn Tài Chính AI & Phân Tích Hiệu Ứng Latte (AI Advisor)
-- Tự động thống kê các khoản chi nhỏ lẻ (`≤ 60.000₫`) tích tụ hàng tháng gây thất thoát dòng tiền (Hiệu ứng Latte).
-- Cố vấn AI thông minh hỗ trợ giải đáp chiến lược tối ưu ngân sách, tính toán tiềm năng tiết kiệm và phân bổ dòng tiền tháng tới qua **Cloudflare Workers AI (Llama 3.2)**.
+- Tự động phát hiện và cảnh báo các khoản chi nhỏ lẻ (`≤ 60.000₫`) tích tụ hàng tháng gây thất thoát dòng tiền (Hiệu ứng Latte).
+- Cố vấn AI thông minh hỗ trợ giải đáp chiến lược ngân sách, gợi ý phương án cắt giảm chi phí và tính toán dòng tiền qua mô hình suy luận sâu **Cloudflare Workers AI (Gemma 4 26B)**.
 
 <p align="center">
   <img src="docs/assets/ai_financial_advisor.png" alt="Salaria AI Financial Advisor" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
 </p>
 
-### 4. 📈 So Sánh Biến Động Đa Tháng (Multi-Month Analytics)
+### 4. 📈 So Sánh Biến Động Đa Tháng & Báo Cáo Định Kỳ
 - Theo dõi xu hướng tăng giảm thu chi và dòng tiền thặng dư giữa các tháng (MoM - Month over Month).
-- Biểu đồ đối chiếu chi tiết từng nhóm danh mục theo thời gian thực.
+- Tự động tạo thông báo tổng kết chi tiêu mỗi tối lúc 22h30 qua Android WorkManager (`DailySummaryWorker`).
 
 <p align="center">
   <img src="docs/assets/multi_month_compare.png" alt="Salaria Multi-Month Comparison" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
 </p>
 
-### 5. 🎨 Bộ Sưu Tập 5 Theme Modern 2026 & Bảo Mật PIN
+### 5. 🎨 Bộ Sưu Tập 5 Theme Modern 2026 & Bảo Mật Session PIN
 - 🌌 **Midnight Cyber (Mặc định)**: Nền Slate đen bóng, viền xanh ngọc Emerald & Cyan công nghệ.
 - 🔮 **Neon Tokyo (Cyberpunk)**: Nền tím thẫm OLED, dạ quang Electric Violet & Cyber Pink tương lai.
 - 🌲 **Nordic Forest**: Nền rêu thông Bắc Âu, kính mờ Sage Glass dịu mắt và thư thái.
@@ -56,186 +64,153 @@
 
 ```mermaid
 flowchart TD
-    subgraph Mobile ["📱 Thiết Bị Di Động (Android)"]
-        BankNoti["🔔 Thông báo Ngân hàng<br/>(MSB, ZaloPay, VCB, MoMo...)"]
-        UserMsg["💬 Tin nhắn Telegram<br/>(35k cafe, 120k Manwah...)"]
-        MacroDroid["⚙️ MacroDroid Webhook Dispatcher<br/>(GET / POST + x-api-key)"]
+    subgraph Mobile ["📱 Thiết Bị Di Động (Native Android App - Jetpack Compose)"]
+        BankNoti["🔔 Thông báo Ngân hàng<br/>(MSB, ZaloPay, Google Wallet, VCB, MoMo...)"]
+        Listener["🎧 BankNotificationListener<br/>(Dịch vụ ngầm tầng OS 24/7, Title-First Filter)"]
+        Room["💾 Room DB Offline Queue<br/>(Bộ nhớ đệm giao dịch khi mất mạng)"]
+        WorkMgr["⏰ WorkManager Engine<br/>(Auto-Sync khi có mạng & Digest 22h30)"]
+        ComposeUI["🎨 Jetpack Compose UI<br/>(Sổ thu chi, AI Chat 0ms Cache, Dashboard)"]
         
-        BankNoti --> MacroDroid
+        BankNoti --> Listener
+        Listener -->|Offline / Mất mạng| Room
+        Room -.->|Khi có mạng trở lại| WorkMgr
+        ComposeUI <--> Room
     end
 
     subgraph Cloudflare ["☁️ Cloudflare Serverless Edge 24/7 (100% Cloud-Native)"]
-        Worker["⚡ Cloudflare Worker (salaria)<br/>(Full-Stack REST API & Router)"]
+        Worker["⚡ Cloudflare Worker Backend<br/>(Modular TypeScript REST API)"]
         
-        subgraph AI_Engine ["🧠 3-Tier Edge AI Engine"]
+        subgraph AI_Engine ["🧠 3-Tier Edge AI Parser Engine"]
             Regex["1. Word-Boundary Regex (0ms)"]
-            Llama["2. Workers AI: Llama 3.2 3B (<0.1s)"]
-            Fallback["3. Fallback: Data Safety Unassigned"]
+            Llama["2. Workers AI: Llama 3.2 3B (<0.2s)<br/>(Context & Merchant Brand Extraction)"]
+            Fallback["3. Data Safety Unassigned Fallback"]
             Regex --> Llama --> Fallback
         end
         
+        subgraph Deep_AI ["🔬 Deep Financial Reasoning Engine"]
+            Gemma["Workers AI: Gemma 4 26B<br/>(Cố vấn 50/30/20, Latte Factor & MoM Analytics)"]
+        end
+        
         D1[("🗄️ Cloudflare D1 Database<br/>(salarini-db - Serverless Relational DB)")]
-        TgBot["🤖 Telegram Bot API<br/>(Webhook 24/7 + Phản hồi xác nhận tức thì)"]
-        EdgeStatic["🌐 Edge Static SPA Hosting<br/>(React 18 + Vite Production Build)"]
+        Telemetry["📋 Blackbox Telemetry & Audit Logs<br/>(Ghi nhật ký Ingest & Debug)"]
         
-        MacroDroid --> Worker
-        UserMsg --> TgBot
-        TgBot --> Worker
         Worker --> AI_Engine
+        Worker <--> Deep_AI
         AI_Engine --> D1
-        Worker -.->|Phản hồi xác nhận| TgBot
-        Worker --> EdgeStatic
+        Worker --> Telemetry
     end
 
-    subgraph Client ["💻 Người Dùng / Trình Duyệt Web"]
-        ReactUI["⚛️ Salaria Web App (React 18 + Tailwind)<br/>(Dashboard, Cố Vấn AI, Sổ Giao Dịch, 5 Themes, Session PIN)"]
-        ReactUI <--> Worker
+    subgraph WebClient ["💻 Bảng Điều Khiển Máy Tính (Modern Desktop Web)"]
+        ReactUI["⚛️ Salaria Web App (React 18 + Vite + Tailwind CSS)<br/>(Dashboard toàn cảnh, Cố vấn AI, Bộ 5 Theme Fintech, Session PIN Lock)"]
     end
 
-    subgraph LocalSync ["🖥️ Máy Cục Bộ (Tùy Chọn Đồng Bộ SQLite SSOT)"]
-        SyncService["🔄 1-Way Sync Service<br/>(Pull & Ack Buffer)"]
-        SQLite[("🗄️ Local SQLite SSOT<br/>(finance.db - WAL Mode)")]
-        LocalBackend["🚀 Node.js / Express Server"]
-        
-        SyncService <--> Worker
-        SyncService --> SQLite
-        LocalBackend <--> SQLite
-    end
+    Listener -->|HTTPS Ingest API| Worker
+    WorkMgr -->|Đẩy giao dịch tồn đọng| Worker
+    ReactUI <-->|REST API + PIN Auth| Worker
 ```
-
-### 🔒 Luồng Xử Lý & Bảo Mật:
-1. **Cloudflare D1 (Serverless Relational Database)**: Lưu trữ toàn bộ danh mục, tài khoản, số dư và giao dịch với độ trễ cực thấp trên mạng lưới Cloudflare toàn cầu.
-2. **Workers AI (Llama 3.2 3B)**: Xử lý ngôn ngữ tự nhiên và phân tích tài chính thông minh trực tiếp trên GPU Edge của Cloudflare, không cần phụ thuộc vào API key bên thứ ba.
-3. **Session PIN Authentication**: Cơ chế xác thực mã PIN theo phiên làm việc giúp ngăn ngừa việc truy cập trái phép trên các thiết bị chia sẻ.
 
 ---
 
-## 📂 Cấu Trúc Thư Mục (Project Structure)
+## 📂 Cấu Trúc Thư Mục Chuẩn Hóa (Project Structure)
 
 ```text
-Salaria/
-├── frontend/                 # React 18 + Vite + Tailwind CSS Frontend
-│   └── src/
-│       ├── api/              # Typed API Client (Cloudflare REST API)
-│       ├── components/       # UI Components (Sidebar, Navbar, ThemeSelector, PinLockScreen...)
-│       ├── context/          # ThemeContext (5 Modern 2026 Themes)
-│       ├── pages/            # Dashboard, Transactions, Accounts, Categories, Advisor, Compare...
-│       ├── types/            # TypeScript data interfaces
-│       └── index.css         # Tailwind directives & Theme Stylesheets
-├── worker/                   # Cloudflare Edge Worker & D1 Database
-│   ├── cloudflare_worker.js  # Full-Stack Edge REST API & Workers AI Llama-3.2 Engine
-│   ├── schema.sql            # Schema D1 Database & Seed Categories
-│   └── wrangler.jsonc        # Cấu hình Wrangler (D1 Database & Workers AI Binding)
-├── backend/                  # Node.js + Express Server (Tùy chọn Local Desktop)
-│   └── src/
-│       ├── advisor/          # Smart Advisor & Financial Analytics Engine
-│       ├── parser/           # Telegram text parser & regex engines
-│       ├── routes/           # REST API routes (transactions, accounts, analytics...)
-│       ├── services/         # D1 Sync Service (Pull & Ack) & Telegram Sync
-│       ├── db.ts             # SQLite initialization & WAL mode setup
-│       └── index.ts          # Local Server entrypoint
-├── docs/                     # Tài liệu & hình ảnh minh họa showcase
-├── start.sh                  # Script khởi động tự động ứng dụng trong 1 click
-├── package.json              # Root project dependencies & scripts
-├── tsconfig.json             # Root TypeScript configuration
-├── .env.example              # Cấu hình biến môi trường mẫu
-├── LICENSE                   # Giấy phép GNU General Public License v3.0
-└── README.md                 # Tài liệu hướng dẫn sử dụng toàn diện
+Salarini/
+├── 📄 GEMINI.md              # 🧭 Hiến pháp AI Agent: Bản đồ mã nguồn, triage P0/P3, hành động cấm kỵ
+├── 📄 FRAMEWORK.md           # 📐 Khung kỹ nghệ phát triển phần mềm chuẩn mực từ ý tưởng đến triển khai
+├── 📄 README.md              # 🌟 Mặt tiền dự án & hướng dẫn kiến trúc vận hành
+├── 📁 android/               # 📱 Native Android App (Kotlin, Jetpack Compose, Room DB, WorkManager)
+│   ├── app/src/main/java/    # Kiến trúc dịch vụ ngầm 24/7, UI Components và DataStore
+│   └── build.gradle.kts      # Cấu hình Gradle nạp biến an toàn từ local.properties
+├── 📁 backend/               # ☁️ Cloudflare Worker REST API & D1 SQLite Database
+│   ├── src/                  # Mã nguồn TypeScript Modular (routes, services, AI engine, telemetry)
+│   ├── migrations/           # D1 SQL Migrations (0001 schema, 0002 daily summaries)
+│   └── wrangler.jsonc        # Cấu hình binding Worker D1, AI và Assets
+├── 📁 frontend/              # 💻 React 18 + Vite + Tailwind CSS Desktop Web App
+│   ├── src/                  # Dashboard, AI Advisor, Analytics, Theme Engine & PIN Screen
+│   └── vite.config.ts        # Vite proxy và tối ưu bundle build
+└── 📁 docs/                  # 🧠 Trung tâm tri thức & quản trị kỹ nghệ
+    ├── 📄 architecture.md    # 🗺️ Bản đồ luồng dữ liệu chi tiết
+    ├── 📄 feature-map.md     # 🗺️ Ma trận tính năng & file liên đới
+    ├── 📄 backlog.md         # 📋 Danh sách công việc P0 - P3 (Chuẩn MoSCoW)
+    ├── 📁 plans/             # 📑 Kế hoạch thực thi chi tiết các tính năng
+    └── 📁 adr/               # 🏛️ Architecture Decision Records (Lưu các quyết định kỹ thuật cốt lõi)
 ```
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt Nhanh (Quickstart)
+## 💬 Cú Pháp Ghi Chép Nhanh Bằng Ngôn Ngữ Tự Nhiên (Natural Language Logging)
 
-### 1. Yêu Cầu Hệ Thống
+Người dùng có thể nhập trực tiếp tại thanh nhập liệu **AI Chat** trên ứng dụng Android hoặc Web Dashboard:
+
+| Nhu cầu ghi chép | Cú pháp ví dụ | Cơ chế phân loại & Kết quả |
+|---|---|---|
+| **Chi tiêu cơ bản** | `35k cafe` hoặc `45k com trua` | Tự động gán `-35.000₫` vào `[Ăn uống]` (0ms Regex) |
+| **Thương hiệu / Địa điểm** | `180k Haidilao Landmark` | Llama 3.2 tự bóc tách `Haidilao` và gán vào `[Ăn uống]` (<0.2s) |
+| **Ứng dụng / Dịch vụ** | `1200k ELSA Speak goi 1 nam` | Llama 3.2 nhận diện `ELSA Speak` và gán vào `[Học tập]` |
+| **Chuyển tiền / Rút tiền** | `rút 500k atm` hoặc `chuyển 2tr cho vợ` | Tự nhận diện giao dịch luân chuyển ví (`transfer`), bảo toàn tổng số dư |
+| **Thu nhập** | `+15tr luong cty` hoặc `500k thuong kpi` | Tự gán `+15.000.000₫` vào `[Thu nhập]` |
+| **Hoàn tác siêu tốc** | `/undo` hoặc `/xoa` | Xóa ngay giao dịch vừa ghi nhận mà không cần mở sổ chi tiêu |
+
+---
+
+## 🚀 Hướng Dẫn Cài Đặt & Triển Khai (Quickstart Guide)
+
+### 1. Yêu Cầu Môi Trường
 - **Node.js**: Phiên bản 18 trở lên (`node -v`).
-- **NPM**: Đi kèm với Node.js.
+- **Android Studio / SDK**: Để biên dịch ứng dụng di động Android.
+- **Tài khoản Cloudflare**: Sử dụng Cloudflare Workers, D1 Database và Workers AI miễn phí.
 
-### 2. Khởi Động Phát Triển Cục Bộ
-Mở Terminal tại thư mục `Salaria`:
-
-```bash
-# Cấp quyền thực thi và khởi động Web App
-chmod +x start.sh
-./start.sh
-```
-
-Mở trình duyệt và truy cập: **[http://localhost:5173](http://localhost:5173)**
-
----
-
-## ⚙️ Hướng Dẫn Triển Khai Cloudflare Serverless & Telegram
-
-### Bước 1: Triển Khai Cloudflare Edge Worker & D1 Database
-1. Cài đặt và đăng nhập Wrangler CLI:
+### 2. Triển Khai Cloudflare Worker & D1 Database
+1. Mở Terminal tại thư mục `backend/`:
    ```bash
-   cd worker
+   cd backend
    npx wrangler login
    ```
-2. Tạo cơ sở dữ liệu Cloudflare D1:
+2. Tạo cơ sở dữ liệu D1 phân tán trên Cloudflare Edge:
    ```bash
    npx wrangler d1 create salarini-db
    ```
-3. Chạy migration tạo bảng dữ liệu mẫu:
+3. Khởi tạo cấu trúc bảng dữ liệu:
    ```bash
    npx wrangler d1 execute salarini-db --remote --file=schema.sql
+   npx wrangler d1 execute salarini-db --remote --file=migrations/0002_add_daily_summaries.sql
    ```
-4. Lưu API Key bảo mật và Telegram Bot Token vào Cloudflare Secrets:
+4. Cấu hình biến bí mật qua Cloudflare Secrets (Không lưu cứng trong Git):
    ```bash
-   printf 'YOUR_SECRET_API_KEY' | npx wrangler secret put API_KEY
-   printf 'YOUR_TELEGRAM_BOT_TOKEN' | npx wrangler secret put TELEGRAM_BOT_TOKEN
+   printf 'YOUR_API_KEY' | npx wrangler secret put API_KEY
+   printf 'YOUR_MASTER_PIN' | npx wrangler secret put MASTER_PIN
    ```
-5. Triển khai Worker lên Cloudflare Edge:
+5. Deploy Worker lên Cloudflare:
    ```bash
    npx wrangler deploy
    ```
-   *Bạn sẽ nhận được URL Worker dạng `https://salaria.your-subdomain.workers.dev`.*
 
-### Bước 2: Đăng Ký Telegram Webhook
-Chạy lệnh curl sau trong terminal (thay thế Token và Worker URL của bạn):
+### 3. Khởi Chạy Desktop Web App
+Tại thư mục gốc dự án:
 ```bash
-curl -s "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://salaria.your-subdomain.workers.dev&secret_token=YOUR_SECRET_API_KEY"
+chmod +x start.sh
+./start.sh
 ```
+Trình duyệt sẽ tự động mở trang quản trị tại: **`http://localhost:5173`**
 
-### Bước 3: Thiết Lập MacroDroid Trên Android (Bắt thông báo ngân hàng)
-1. Cài đặt **MacroDroid** từ Google Play Store và cấp quyền đọc thông báo (*Notification Access*).
-2. Tạo 1 **Macro mới**:
-   - **🔴 Trigger (Kích hoạt)**:
-     - Chọn **Thông báo đã nhận (Notification Received)**.
-     - Chọn các app ngân hàng của bạn (*MSB DigiBank, ZaloPay, Google Wallet, VCB, MoMo, Techcombank...*).
-     - Mục Nội dung: Chọn **Bất kỳ nội dung nào (Any content)**.
-   - **🔵 Action (Hành động)**:
-     - Chọn **Yêu cầu HTTP (HTTP Request)**.
-     - **Phương thức**: `GET`.
-     - **URL**:
-       ```text
-       https://salaria.your-subdomain.workers.dev/?text=[notification_title] [notification_text]
-       ```
-     - **Request Header**: Thêm header `x-api-key` với giá trị `YOUR_SECRET_API_KEY`.
-3. Bật công tắc Macro sang **ON**. Mỗi khi có thông báo trừ tiền/cộng tiền, điện thoại sẽ tự động ghi sổ và báo về Telegram ngay tức khắc!
-
----
-
-## 💬 Cú Pháp Nhắn Tin Telegram Nhanh
-
-| Mục đích | Cú pháp ví dụ | Kết quả nhận diện |
-|---|---|---|
-| **Chi tiêu cơ bản** | `35k cafe` hoặc `45k com trua` | Tự gán `-35.000₫` vào `[Ăn uống]` (0ms Regex) |
-| **Thương hiệu / Món ăn đặc biệt** | `180k Haidilao Landmark` | Llama 3.2 tự bóc tách tên `Haidilao` và gán vào `[Ăn uống]` |
-| **Ứng dụng / Dịch vụ** | `1200k ELSA Speak goi 1 nam` | Llama 3.2 tự bóc tách `ELSA Speak` và gán vào `[Học tập]` |
-| **Thu nhập** | `+15tr luong cty` hoặc `500k thuong kpi` | Tự gán `+15.000.000₫` vào `[Lương chính]` |
-| **Xóa / Hoàn tác** | `/xoa` hoặc `/undo` | Xóa ngay giao dịch vừa ghi nhầm |
+### 4. Cài Đặt Ứng Dụng Android Native
+1. Mở dự án thư mục `android/` bằng Android Studio hoặc biên dịch file APK:
+   ```bash
+   cd android && ./gradlew assembleDebug
+   ```
+2. Cài đặt file APK lên thiết bị và cấp quyền **Notification Listener (Truy cập thông báo)** để ứng dụng tự động ghi nhận giao dịch 24/7 từ các ứng dụng ngân hàng.
 
 ---
 
 ## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
 
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide React, Recharts.
-- **Edge Computing & Database**: Cloudflare Workers, Cloudflare D1 Database (Serverless SQLite).
-- **Edge AI Engine**: Cloudflare Workers AI (`@cf/meta/llama-3.2-3b-instruct`).
-- **Mobile Automation**: MacroDroid (Android Notification Listener & Webhook Dispatcher).
-- **Communication**: Telegram Bot API.
-- **Local Server (Optional)**: Node.js, Express, TypeScript, Better-SQLite3 (`WAL Mode`).
+- **Native Mobile App**: Android Native (Kotlin 2.0, Jetpack Compose, Room DB, WorkManager, NotificationListenerService).
+- **Backend Edge**: Cloudflare Workers (Full-Stack TypeScript REST API, zero cold start).
+- **Database**: Cloudflare D1 (Serverless SQLite phân tán toàn cầu).
+- **Edge AI Models**:
+  - Phân loại giao dịch: `@cf/meta/llama-3.2-3b-instruct`
+  - Cố vấn tài chính sâu: `@cf/google/gemma-4-26b-a4b-it`
+- **Desktop Web App**: React 18, Vite, TypeScript, Tailwind CSS, Recharts, Lucide Icons.
 
 ---
 

@@ -2,7 +2,6 @@ import {
   Account, 
   Category, 
   Transaction, 
-  TelegramParseResult, 
   MonthlyStats, 
   FinancialHealthAnalysis, 
   MultiMonthComparison 
@@ -12,7 +11,11 @@ const RAW_API_URL = import.meta.env.VITE_API_URL || '';
 const API_BASE = RAW_API_URL ? `${RAW_API_URL.replace(/\/$/, '')}/api` : '/api';
 
 function getAuthHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
-  const apiKey = sessionStorage.getItem('salaria_api_key') || localStorage.getItem('salaria_api_key') || 'salaria_secret_2026';
+  let apiKey = sessionStorage.getItem('salaria_api_key') || localStorage.getItem('salaria_api_key');
+  if (!apiKey || apiKey === 'salaria_secret_2026' || apiKey === 'salarini_secret_2026') {
+    apiKey = import.meta.env.VITE_API_KEY || 'sal_sec_demo_key_2026';
+    localStorage.setItem('salaria_api_key', apiKey);
+  }
   return {
     'x-api-key': apiKey,
     ...customHeaders,
@@ -93,10 +96,16 @@ export const api = {
     sort_by?: string;
     limit?: number;
     offset?: number;
+    startDate?: string;
+    endDate?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<{ transactions: Transaction[]; availableMonths: string[] }> {
     const query = new URLSearchParams();
     if (params?.month) query.set('month', params.month);
     if (params?.date) query.set('date', params.date);
+    if (params?.startDate || params?.start_date) query.set('start_date', params.startDate || params.start_date || '');
+    if (params?.endDate || params?.end_date) query.set('end_date', params.endDate || params.end_date || '');
     if (params?.category_id) query.set('category_id', params.category_id);
     if (params?.account_id) query.set('account_id', params.account_id);
     if (params?.type) query.set('type', params.type);
@@ -149,54 +158,19 @@ export const api = {
     return await res.json();
   },
 
-  // Telegram Import
-  async parseTelegramFile(file: File, defaultAccountId: string = 'acc_cash'): Promise<TelegramParseResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('defaultAccountId', defaultAccountId);
-
-    const res = await fetch(`${API_BASE}/import/telegram-html`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: formData
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Lỗi khi parse file');
-    return json.data;
-  },
-
-  async parseTelegramText(htmlContent: string, defaultAccountId: string = 'acc_cash'): Promise<TelegramParseResult> {
-    const res = await fetch(`${API_BASE}/import/telegram-html`, {
-      method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ htmlContent, defaultAccountId })
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Lỗi khi parse nội dung');
-    return json.data;
-  },
-
-  async confirmImport(transactions: any[]): Promise<{ savedCount: number; message: string }> {
-    const res = await fetch(`${API_BASE}/import/confirm`, {
-      method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ transactions })
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Lỗi khi lưu giao dịch');
-    return json;
-  },
-
-  async getSampleTelegramHtml(): Promise<string> {
-    const res = await fetch(`${API_BASE}/import/sample-html`, {
-      headers: getAuthHeaders()
-    });
-    return await res.text();
-  },
-
   // Analytics & Insights
-  async getMonthlyStats(month: string): Promise<MonthlyStats> {
-    const res = await fetch(`${API_BASE}/analytics/monthly?month=${month}`, {
+  async getMonthlyStats(params: string | { month?: string; startDate?: string; endDate?: string }): Promise<MonthlyStats> {
+    let query = '';
+    if (typeof params === 'string') {
+      query = `month=${encodeURIComponent(params)}`;
+    } else {
+      const q = new URLSearchParams();
+      if (params.month) q.set('month', params.month);
+      if (params.startDate) q.set('start_date', params.startDate);
+      if (params.endDate) q.set('end_date', params.endDate);
+      query = q.toString();
+    }
+    const res = await fetch(`${API_BASE}/analytics/monthly?${query}`, {
       headers: getAuthHeaders()
     });
     const json = await res.json();
@@ -237,71 +211,5 @@ export const api = {
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Lỗi khi gọi AI');
     return json.data;
-  },
-
-  // Telegram Bot Auto-Sync
-  async getTelegramConfig(): Promise<{
-    configured: boolean;
-    botUsername?: string;
-    autoSync: boolean;
-    replyEnabled: boolean;
-    lastSyncTime?: string;
-    maskedToken: string;
-  }> {
-    const res = await fetch(`${API_BASE}/telegram/config`, {
-      headers: getAuthHeaders()
-    });
-    const json = await res.json();
-    return json.data;
-  },
-
-  async saveTelegramConfig(config: {
-    botToken?: string;
-    autoSync?: boolean;
-    replyEnabled?: boolean;
-  }): Promise<{ message: string; botUsername?: string }> {
-    const res = await fetch(`${API_BASE}/telegram/config`, {
-      method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(config)
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Lỗi khi lưu cấu hình Telegram');
-    return json;
-  },
-
-  async testTelegramBot(botToken: string): Promise<{ success: boolean; botName?: string; username?: string; message?: string }> {
-    const res = await fetch(`${API_BASE}/telegram/test`, {
-      method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ botToken })
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Kiểm tra Token thất bại');
-    return json;
-  },
-
-  async syncTelegram(): Promise<{ syncedCount: number; transactions: any[]; message: string }> {
-    const res = await fetch(`${API_BASE}/telegram/sync`, {
-      method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json' })
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Lỗi khi đồng bộ Telegram');
-    return json.data;
-  },
-
-  // Backup & Restore
-  async exportBackup(): Promise<void> {
-    window.location.href = `${API_BASE}/backup/export-json`;
-  },
-
-  async importBackup(data: any): Promise<{ message: string }> {
-    const res = await fetch(`${API_BASE}/backup/import-json`, {
-      method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ data })
-    });
-    return await res.json();
   }
 };

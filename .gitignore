@@ -34,6 +34,7 @@ backend/.env.*
 
 # Cloudflare Wrangler Cache
 .wrangler/
+**/.wrangler/
 
 # Logs & Runtime Process IDs
 *.log
@@ -47,3 +48,17 @@ Thumbs.db
 .vscode/
 .idea/
 .gemini/
+
+# Android Build & Gradle Artifacts
+.gradle/
+.kotlin/
+android/.kotlin/
+android/**/build/
+android/.gradle/
+android/local.properties
+android/**/release/*.apk
+android/**/debug/*.apk
+*.apk
+*.aab
+
+

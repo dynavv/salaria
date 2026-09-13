@@ -36,6 +36,7 @@ import {
 import { MonthlyStats, Transaction } from '../types';
 import { api } from '../api/client';
 import { IconRenderer } from '../components/IconRenderer';
+import { getPaycheckCycle, PaycheckCycleInfo } from '../utils/paycheckHelper';
 
 interface DashboardPageProps {
   currentMonth: string;
@@ -52,6 +53,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigateToAdvisor,
   onNavigateToTransactions,
 }) => {
+  const [viewMode, setViewMode] = useState<'cycle' | 'month'>('cycle');
   const [stats, setStats] = useState<MonthlyStats | null>(null);
   const [recentTx, setRecentTx] = useState<Transaction[]>([]);
   const [recentTxSort, setRecentTxSort] = useState<'date_desc' | 'amount_desc'>('date_desc');
@@ -80,19 +82,32 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   useEffect(() => {
     loadDashboardData();
-  }, [currentMonth, recentTxSort, refreshTrigger]);
+  }, [currentMonth, recentTxSort, refreshTrigger, viewMode]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      const isCycle = viewMode === 'cycle';
+      const cycle = getPaycheckCycle();
+
       const [statsRes, txRes] = await Promise.all([
-        api.getMonthlyStats(currentMonth),
-        api.getTransactions({ 
-          month: currentMonth, 
-          sort_by: recentTxSort,
-          type: recentTxSort === 'amount_desc' ? 'expense' : undefined,
-          limit: 8 
-        }),
+        isCycle
+          ? api.getMonthlyStats({ startDate: cycle.startDate, endDate: cycle.endDate })
+          : api.getMonthlyStats(currentMonth),
+        isCycle
+          ? api.getTransactions({
+              startDate: cycle.startDate,
+              endDate: cycle.endDate,
+              sort_by: recentTxSort,
+              type: recentTxSort === 'amount_desc' ? 'expense' : undefined,
+              limit: 8
+            })
+          : api.getTransactions({ 
+              month: currentMonth, 
+              sort_by: recentTxSort,
+              type: recentTxSort === 'amount_desc' ? 'expense' : undefined,
+              limit: 8 
+            }),
       ]);
       setStats(statsRes);
       setRecentTx(txRes.transactions);
@@ -120,7 +135,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     try {
       setSelectedCategory(cat);
       setLoadingCategoryTx(true);
-      const res = await api.getTransactions({ month: currentMonth, category_id: cat.id, limit: 100 });
+      const isCycle = viewMode === 'cycle';
+      const cycle = getPaycheckCycle();
+      const res = await api.getTransactions(
+        isCycle
+          ? { startDate: cycle.startDate, endDate: cycle.endDate, category_id: cat.id, limit: 100 }
+          : { month: currentMonth, category_id: cat.id, limit: 100 }
+      );
       setCategoryTransactions(res.transactions);
     } catch (err) {
       console.error('Failed to fetch category transactions', err);
@@ -141,14 +162,34 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   if (!stats) return null;
 
   // Compute Days and Burn Rate Projection
+  const isCycleMode = viewMode === 'cycle';
+  const cycleInfo = getPaycheckCycle();
+
   const [yearStr, monthStr] = currentMonth.split('-');
   const daysInMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
   const today = new Date();
   const isCurrentMonth = today.toISOString().substring(0, 7) === currentMonth;
-  const currentDay = isCurrentMonth ? Math.min(today.getDate(), daysInMonth) : daysInMonth;
-  const daysRemaining = Math.max(daysInMonth - currentDay, 1);
 
-  const projectedTotalExpense = currentDay > 0 ? (stats.totalExpense / currentDay) * daysInMonth : stats.totalExpense;
+  const currentDay = isCycleMode ? cycleInfo.currentDayInCycle : (isCurrentMonth ? Math.min(today.getDate(), daysInMonth) : daysInMonth);
+  const totalDays = isCycleMode ? cycleInfo.totalDaysInCycle : daysInMonth;
+  const daysRemaining = Math.max(totalDays - currentDay, 1);
+
+  // Decomposed forecast: Fixed expenses vs Daily variable burn rate
+  let fixedExpenseTotal = 0;
+  if (stats.categories) {
+    for (const cat of stats.categories) {
+      const isFixedCat = cat.categoryId === 'cat_housing' || cat.categoryId === 'cat_education' || cat.categoryId === 'cat_debt'
+        || cat.categoryName.toLowerCase().includes('tiền nhà') 
+        || cat.categoryName.toLowerCase().includes('học phí');
+      if (isFixedCat) {
+        fixedExpenseTotal += cat.amount;
+      }
+    }
+  }
+
+  const variableExpense = Math.max(0, stats.totalExpense - fixedExpenseTotal);
+  const dailyVariableBurnRate = currentDay > 0 ? variableExpense / currentDay : 0;
+  const projectedTotalExpense = Math.round(fixedExpenseTotal + (dailyVariableBurnRate * totalDays));
   const safeDailyBudget = stats.totalIncome > stats.totalExpense 
     ? Math.max(0, (stats.totalIncome * 0.8 - stats.totalExpense) / daysRemaining)
     : 0;
@@ -196,6 +237,49 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-200">
       
+      {/* 🧭 0. VIEW MODE TOGGLE: Kỳ Lương vs Theo Tháng */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-2.5 rounded-2xl border border-slate-800 shadow-md backdrop-blur-xl">
+        <div className="flex items-center space-x-2 bg-slate-950/90 p-1 rounded-xl border border-slate-800">
+          <button
+            onClick={() => setViewMode('cycle')}
+            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              isCycleMode
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Kỳ lương ({cycleInfo.shortDisplay})</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-extrabold ${
+              isCycleMode ? 'bg-emerald-900/40 text-emerald-950' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {cycleInfo.currentDayInCycle}/{cycleInfo.totalDaysInCycle} ngày
+            </span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('month')}
+            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              !isCycleMode
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Xem theo tháng ({monthTitle})</span>
+          </button>
+        </div>
+
+        <div className="hidden sm:flex items-center space-x-2 text-xs text-slate-400 pr-3">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>
+            {isCycleMode
+              ? `Chu kỳ hiện tại: Ngày 22 tháng trước → 21 tháng này`
+              : `Toàn bộ giao dịch trong ${monthTitle}`}
+          </span>
+        </div>
+      </div>
+
       {/* 🌟 1. SIGNATURE HERO BAR: Financial Health Score & Burn Rate */}
       <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-slate-900/95 via-slate-900/90 to-slate-800/80 border border-slate-700/60 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
@@ -230,8 +314,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <div>
               <div className="flex items-center space-x-1.5">
                 <ShieldCheck className={`w-4 h-4 ${healthScore >= 75 ? 'text-emerald-400' : healthScore >= 50 ? 'text-amber-400' : 'text-rose-400'}`} />
-                <h2 className="text-sm font-bold text-slate-100">
-                  {healthScore >= 80 ? 'Sức Khỏe Tài Chính Xuất Sắc' : healthScore >= 60 ? 'Tài Chính Ổn Định' : 'Cần Tối Ưu Chi Tiêu'}
+                <h2 className="text-sm font-black text-slate-100">
+                  {healthScore >= 75 ? 'Sức Khỏe Tài Chính Rất Tốt' : healthScore >= 50 ? 'Cần Tối Ưu Chi Tiêu' : 'Báo Động Chi Tiêu'}
                 </h2>
               </div>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
@@ -239,7 +323,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   ? `Đang tích lũy vượt trội (${stats.savingsRate.toFixed(1)}% thu nhập).` 
                   : stats.savingsRate >= 0 
                   ? `Dòng tiền dương. Mục tiêu tiếp theo là tiết kiệm 20%.` 
-                  : `Đang bội chi tháng này. Hãy kiểm tra các khoản phát sinh!`}
+                  : `Đang bội chi trong chu kỳ này. Hãy kiểm tra các khoản phát sinh!`}
               </p>
             </div>
           </div>
@@ -253,23 +337,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <span>Tốc độ chi tiêu / ngày</span>
               </div>
               <p className="text-base font-black text-slate-100 mt-1.5">
-                {Math.round(stats.dailyAverageExpense).toLocaleString('vi-VN')} ₫
+                {Math.round(currentDay > 0 ? stats.totalExpense / currentDay : 0).toLocaleString('vi-VN')} ₫
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                Đã trôi qua {currentDay}/{daysInMonth} ngày
+                Đã trôi qua {currentDay}/{totalDays} ngày
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-700/40">
               <div className="flex items-center space-x-1.5 text-slate-400 text-xs">
                 <Clock className="w-3.5 h-3.5 text-sky-400" />
-                <span>Dự báo chi cả tháng</span>
+                <span>{isCycleMode ? 'Dự báo chi cả kỳ' : 'Dự báo chi cả tháng'}</span>
               </div>
               <p className={`text-base font-black mt-1.5 ${projectedTotalExpense > stats.totalIncome && stats.totalIncome > 0 ? 'text-rose-400' : 'text-sky-300'}`}>
                 {Math.round(projectedTotalExpense).toLocaleString('vi-VN')} ₫
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                {stats.totalIncome > 0 ? `Chiếm ${(projectedTotalExpense / stats.totalIncome * 100).toFixed(0)}% thu nhập` : 'Ước tính theo chu kỳ'}
+                {stats.totalIncome > 0 ? `Chiếm ${(projectedTotalExpense / stats.totalIncome * 100).toFixed(0)}% thu nhập` : (isCycleMode ? 'Bóc tách chi phí cố định' : 'Ước tính cả tháng')}
               </p>
             </div>
 
@@ -296,7 +380,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* Total Expense */}
         <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md hover:border-slate-700/80 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Tổng Chi Tiêu</span>
+            <span className="text-xs font-semibold text-slate-400">{isCycleMode ? 'Chi Tiêu Kỳ Này' : 'Tổng Chi Tiêu'}</span>
             <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
               <TrendingDown className="w-4 h-4" />
             </div>
@@ -306,7 +390,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </p>
           <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-800/80">
             <span>Trung bình / ngày:</span>
-            <span className="font-semibold text-slate-300">{Math.round(stats.dailyAverageExpense).toLocaleString('vi-VN')} ₫</span>
+            <span className="font-semibold text-slate-300">{Math.round(currentDay > 0 ? stats.totalExpense / currentDay : 0).toLocaleString('vi-VN')} ₫</span>
           </div>
         </div>
 

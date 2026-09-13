@@ -1,34 +1,18 @@
 {
   "name": "salaria",
   "version": "1.0.0",
-  "description": "Salaria — Intelligent Zero-Friction Wealth Flow & AI Financial Advisor",
+  "description": "An automated personal finance companion that captures your bank alerts in real time",
   "license": "GPL-3.0-or-later",
-  "main": "backend/src/index.ts",
   "scripts": {
-    "server": "tsx watch backend/src/index.ts",
-    "client": "npm --prefix frontend run dev",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build:client": "npm --prefix frontend run build",
-    "demo:load": "cp -n data/finance.db data/finance.db.real_backup 2>/dev/null || true && tsx backend/src/seedShowcaseMockup.ts",
-    "demo:restore": "if [ -f data/finance.db.real_backup ]; then cp data/finance.db.real_backup data/finance.db && rm -f data/finance.db-shm data/finance.db-wal && echo '✅ Đã khôi phục dữ liệu thật 100%!'; else echo '⚠️ Không tìm thấy file sao lưu data/finance.db.real_backup'; fi",
-    "start": "tsx backend/src/index.ts"
-  },
-  "dependencies": {
-    "better-sqlite3": "^11.8.1",
-    "cheerio": "^1.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "multer": "^1.4.5-lts.1"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "deploy:frontend": "npm --prefix frontend run deploy",
+    "dev:backend": "cd backend && npx wrangler dev",
+    "deploy:backend": "cd backend && npx wrangler deploy",
+    "start": "./start.sh"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/multer": "^1.4.12",
-    "@types/node": "^22.13.4",
-    "concurrently": "^9.1.2",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "wrangler": "^4.127.1"
   }
 }
