@@ -66,5 +66,5 @@
 
 Dự án này là tài sản trí tuệ cá nhân phục vụ mục đích **Portfolio Showcase & Đánh giá năng lực kỹ thuật**. Mã nguồn đầy đủ và bản demo trực tiếp được cung cấp cho nhà tuyển dụng theo yêu cầu.
 
-* **Tác giả:** Đỗ Ý (dynavv)
+* **Tác giả:** dynavv
 * **GitHub Profile:** https://github.com/dynavv

@@ -224,6 +224,6 @@ Your browser will automatically open the management dashboard at: **`http://loca
 
 ## 🔒 License & Portfolio Notice
 
-This project is proprietary software created by Đỗ Ý (dynavv). It is published strictly as a technical case study and portfolio showcase.
+This project is proprietary software created by dynavv. It is published strictly as a technical case study and portfolio showcase.
 
 No permission is granted to reproduce, distribute, or reverse-engineer this software without prior written permission. Source code access is available to technical recruiters upon request.
