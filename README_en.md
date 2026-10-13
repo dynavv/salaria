@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Backend-Cloudflare%20Workers%20%28TypeScript%29-F38020?style=for-the-badge&logo=cloudflare">
   <img src="https://img.shields.io/badge/Database-Cloudflare%20D1%20%28Edge%20SQLite%29-4285F4?style=for-the-badge&logo=sqlite">
   <img src="https://img.shields.io/badge/AI-Gemma%204%2026B%20%7C%20Llama%203.2-8E44AD?style=for-the-badge">
-  <img src="https://img.shields.io/badge/License-GPL--3.0--or--later-green?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/License-Proprietary%20%2F%20Portfolio%20Only-red?style=for-the-badge" alt="License">
 </p>
 
 > An automated personal finance companion that captures your bank alerts and categorizes them with AI in real time — keeping you on budget without the chore of manual logging.
@@ -222,6 +222,8 @@ Your browser will automatically open the management dashboard at: **`http://loca
 
 ---
 
-## 📄 License
+## 🔒 License & Portfolio Notice
 
-This project is licensed under the **[GNU General Public License v3.0 (GPLv3)](LICENSE)**.
+This project is proprietary software created by Đỗ Ý (dynavv). It is published strictly as a technical case study and portfolio showcase.
+
+No permission is granted to reproduce, distribute, or reverse-engineer this software without prior written permission. Source code access is available to technical recruiters upon request.
