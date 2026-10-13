@@ -1,7 +1,7 @@
 # 💎 Salaria
 
-> **Bạn chi 35k cà phê hay 500k siêu thị? Đừng tốn công ghi chép thủ công.**  
-> Đa số nỗ lực quản lý tài chính đều thất bại sau vài tuần vì việc nhập liệu bằng tay quá nhiều ma sát. **Salaria** tự động hóa 100% quy trình này: Lắng nghe biến động số dư ngân hàng 24/7, phân loại AI tức thì trong < 0.2 giây và đưa ra hạn mức chi tiêu an toàn mỗi ngày.
+> **Vừa quẹt 35k ly cà phê hay chuyển khoản 500k đi chợ? Đừng tốn công mở app ghi chép tay.**  
+> Hầu hết mọi người đều bỏ cuộc quản lý chi tiêu chỉ sau vài tuần vì việc nhớ và nhập từng khoản tiền lẻ quá phiền phức và dễ quên. **Salaria** giải quyết trọn vẹn việc này: Tự động bắt biến động số dư ngân hàng 24/7, AI phân loại tức thì trong < 0.2 giây và tính sẵn hạn mức bạn được tiêu an toàn mỗi ngày.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Domain-Fintech%20Operations-blue?style=for-the-badge">
