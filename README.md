@@ -1,6 +1,7 @@
 # 💎 Salaria
 
-> **Fintech Case Study:** End-to-end operational process automation, risk-controlled AI workflows, and financial telemetry.
+> **Bạn chi 35k cà phê hay 500k siêu thị? Đừng tốn công ghi chép thủ công.**  
+> Đa số nỗ lực quản lý tài chính đều thất bại sau vài tuần vì việc nhập liệu bằng tay quá nhiều ma sát. **Salaria** tự động hóa 100% quy trình này: Lắng nghe biến động số dư ngân hàng 24/7, phân loại AI tức thì trong < 0.2 giây và đưa ra hạn mức chi tiêu an toàn mỗi ngày.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Domain-Fintech%20Operations-blue?style=for-the-badge">
@@ -21,9 +22,17 @@
 
 ---
 
-## 📌 Bối Cảnh & Hiệu Quả Nghiệp Vụ (Business Impact)
+## 💡 Vấn Đề & Cách Thức Giải Quyết (Problem & Solution)
 
-Việc quản lý tài chính thủ công thường gặp trở ngại do tốn thời gian, dễ sai sót dữ liệu và tỷ lệ duy trì thấp. **Salaria** giải quyết bài toán này bằng cách tự động hóa hoàn toàn quy trình thu thập và phân loại biến động số dư theo thời gian thực.
+* **Vấn đề thực tế:** Người dùng thường nhanh chóng bỏ cuộc vì việc mở app nhập từng khoản tiền lẻ quá phiền phức. Các app ngân hàng chỉ thông báo số dư biến động mà không hỗ trợ phân bổ ngân sách hay cảnh báo bội chi kịp thời.
+* **Cách Salaria giải quyết:**
+  * **Tự động bắt giao dịch 24/7:** Dịch vụ ngầm tầng OS tự động bắt thông báo từ MSB, Vietcombank, Techcombank, MoMo, ZaloPay... ngay khi phát sinh giao dịch mà không cần người dùng mở app.
+  * **Phân loại AI tức thì (< 200ms):** Mô hình AI biên (Edge AI) tự động đọc hiểu ngữ cảnh quán xá, thương hiệu và xếp vào đúng nhóm chi tiêu.
+  * **Chủ động bảo vệ dòng tiền:** Tính toán tốc độ đốt tiền (Burn Rate) và hạn mức chi an toàn còn lại mỗi ngày theo chuẩn 50/30/20, ngăn ngừa nguy cơ "cháy túi" trước ngày nhận lương.
+
+---
+
+## 📌 Hiệu Quả Đo Lường Nghiệp Vụ (Measurable Impact)
 
 | Chỉ số vận hành (KPI) | Trước khi tự động hóa | Sau khi triển khai Salaria | Hiệu quả đạt được |
 | :--- | :--- | :--- | :--- |
